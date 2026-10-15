@@ -22,6 +22,9 @@ verificacion/ Evidencia de las pruebas: salidas reales de curl y prueba de concu
 - **Endpoints** con ejemplos → [`backend/docs/api.md`](backend/docs/api.md)
 - **Evidencia de verificación** (salidas reales de `curl` y de la prueba de concurrencia) →
   [`verificacion/`](verificacion/)
+- **Verificación contra la API desplegada** (26 casos, incluida la reserva simultánea y el aislamiento
+  entre usuarios) → [`verificacion/e2e-nube.txt`](verificacion/e2e-nube.txt), se reproduce con
+  `python3 verificacion/e2e-nube.py`
 
 ## Cómo se corre
 
@@ -67,9 +70,14 @@ cd app && flutter test
 
 ## Despliegue
 
-La API y la base de datos van a la nube (Render), según lo que pide la consigna. El repositorio incluye
-`backend/render.yaml` como Blueprint: Render crea el servicio web y la base PostgreSQL, e inyecta
-`DATABASE_URL`. Los pasos están en [`backend/README.md`](backend/README.md#5-despliegue-en-render-api--postgresql).
+La API y la base de datos van a la nube (Render), según lo que pide la consigna. Está desplegada en
+<https://clubsebastianmartinezamaray-api.onrender.com> (Swagger en `/docs`), con PostgreSQL administrado
+por la misma plataforma. El repositorio incluye `backend/render.yaml` como Blueprint: Render crea el
+servicio web y la base PostgreSQL, e inyecta `DATABASE_URL`. Los pasos están en
+[`backend/README.md`](backend/README.md#5-despliegue-en-render-api--postgresql).
+
+El plan gratuito duerme el servicio a los 15 minutos sin tráfico, así que la primera petición después
+de eso tarda alrededor de un minuto.
 
 ## Alcance y decisiones
 

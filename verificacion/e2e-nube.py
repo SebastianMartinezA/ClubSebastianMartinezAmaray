@@ -59,7 +59,7 @@ lineas.append(f"    sedes devueltas: {[s['name'] for s in sedes] if isinstance(s
 st, espacios = req("GET", f"/venues/{sedes[0]['id']}/spaces")
 check("espacios de la sede", st, 200)
 espacio = espacios[0]
-lineas.append(f"    espacio: {espacio['name']} (id {espacio['id']}, tipo {espacio.get('type')})")
+lineas.append(f"    espacio: {espacio['name']} (id {espacio['id']}, tipo {espacio.get('space_type')})")
 
 # 2. Registro y login
 nuevo = f"verif.{date.today().strftime('%Y%m%d')}.{datetime.now().strftime('%H%M%S')}@club.com"
@@ -88,9 +88,19 @@ check("perfil sin token", st, 401)
 
 # 4. Reservas
 fecha = (date.today() + timedelta(days=2)).isoformat()
-cuerpo = {"sport_space_id": espacio["id"], "date": fecha, "start_time": "10:00", "end_time": "11:00"}
-st, reserva = req("POST", "/reservations", cuerpo, token=token)
-check("reserva valida", st, 201)
+cuerpo = None
+reserva = None
+st_reserva = None
+hora_elegida = None
+for h in range(8, 22):
+    tentativo = {"sport_space_id": espacio["id"], "date": fecha,
+                 "start_time": f"{h:02d}:00", "end_time": f"{h + 1:02d}:00"}
+    st, r = req("POST", "/reservations", tentativo, token=token)
+    if st == 201:
+        cuerpo, reserva, st_reserva, hora_elegida = tentativo, r, st, h
+        break
+check("reserva valida (primer turno libre encontrado)", st_reserva, 201)
+lineas.append(f"    turno probado: {fecha} de {hora_elegida:02d}:00 a {hora_elegida + 1:02d}:00")
 rid = reserva.get("id") if isinstance(reserva, dict) else None
 st, r = req("POST", "/reservations", cuerpo, token=token)
 check("reserva superpuesta", st, 409)
