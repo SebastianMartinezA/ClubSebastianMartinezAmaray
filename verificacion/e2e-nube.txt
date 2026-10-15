@@ -17,7 +17,7 @@ OK  perfil sin token: 401 (esperado 401)
 OK  perfil con nombre en blanco: 400 (esperado 400)
 OK  perfil con fecha de nacimiento futura: 400 (esperado 400)
 OK  reserva valida (primer turno libre encontrado): 201 (esperado 201)
-    turno probado: 2026-10-16 de 12:00 a 13:00
+    turno probado: 2026-10-17 de 09:00 a 10:00
 OK  reserva superpuesta: 409 (esperado 409)
     codigo de error: space_not_available
 OK  duracion menor a una hora: 400 (esperado 400)
@@ -28,10 +28,10 @@ OK  listar mis reservas: 200 (esperado 200)
 OK  cancelar: 200 (esperado 200)
 OK  reservar de nuevo el horario liberado: 201 (esperado 201)
 OK  historial: 200 (esperado 200)
-    historial: 4 entradas, primera con estado cancelled
+    historial: 5 entradas, primera con estado cancelled
 OK  cancelled_at no es anterior a created_at: True (esperado True)
 OK  cancelled_at es la hora real (menos de 10 min de desvio): True (esperado True)
-    created_at 2026-10-15T02:56:31.966751Z | cancelled_at 2026-10-15T02:56:36.036312Z | desvio 2s
+    created_at 2026-10-15T03:10:51.920896Z | cancelled_at 2026-10-15T03:10:55.948943Z | desvio 1s
 OK  ver la reserva de otro usuario: 404 (esperado alguno de [403, 404]) (404 = la ruta de detalle no existe)
 OK  cancelar la reserva de otro usuario: 403 (esperado 403)
 OK  swagger: 200 (esperado 200)

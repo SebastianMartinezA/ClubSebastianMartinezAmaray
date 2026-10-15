@@ -10,6 +10,11 @@ It writes:
   * android/app/src/main/res/mipmap-*/ic_launcher.png   (legacy icons)
   * android/app/src/main/res/drawable/ic_launcher_foreground.xml
     (foreground of the adaptive icon of Android 8+)
+  * android/app/src/main/res/drawable/ic_launcher_monochrome.xml
+    (monochrome layer for the "themed icons" of Android 13+)
+
+`mipmap-anydpi-v26/ic_launcher.xml` (the adaptive-icon descriptor) is written by
+hand and references the two drawables above, so keep its names in sync.
 
 Usage:  python3 tool/generate_icons.py
 """
@@ -112,6 +117,26 @@ FOREGROUND_XML = """<?xml version="1.0" encoding="utf-8"?>
 """
 
 
+MONOCHROME_XML = """<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome layer of the adaptive launcher icon (Android 13+ "themed icons").
+     The system tints this drawable, so it must be a single colour with the shape
+     in the alpha channel: a filled disc with the pentagon punched out (evenOdd).
+     It cannot reuse `ic_launcher_foreground`, which has two colours: on themed
+     icons the pentagon would be painted over and the ball would come out as a
+     plain tinted circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="{disc} {pentagon}" />
+</vector>
+"""
+
+
 def circle_path(cx, cy, radius):
     return (
         f'M{cx - radius},{cy} '
@@ -145,6 +170,14 @@ def main():
     with open(os.path.join(drawable, 'ic_launcher_foreground.xml'), 'w') as handle:
         handle.write(xml)
     print('wrote drawable/ic_launcher_foreground.xml')
+
+    monochrome = MONOCHROME_XML.format(
+        disc=circle_path(54, 54, 26),
+        pentagon=pentagon_path(54, 54, 14),
+    )
+    with open(os.path.join(drawable, 'ic_launcher_monochrome.xml'), 'w') as handle:
+        handle.write(monochrome)
+    print('wrote drawable/ic_launcher_monochrome.xml')
 
     # Preview at 1024 px, handy to paste in the report or the README.
     preview_dir = os.path.join(HERE, '..', 'docs')

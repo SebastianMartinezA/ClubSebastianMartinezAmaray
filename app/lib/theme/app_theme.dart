@@ -71,14 +71,15 @@ class SportStyle {
 /// Note on the type scale: the prototype was measured on a compact frame and
 /// its body text came out around 11 dp and its titles around 17 dp. On a phone
 /// that is too small, so the scale below is the same hierarchy with legible
-/// sizes, and every step is strictly larger than the one below it:
+/// sizes, and no step is smaller than the one below it:
 ///
 ///   display 30 · headlines 23-26 · titles 16-21 · body 15-16 · labels 12-14
 ///
-/// `titleMedium` (18, card and section titles) is deliberately *above*
-/// `bodyLarge` (16), so a title never comes out smaller than the paragraph
-/// under it. The choice is deliberate and easy to defend: same design,
-/// readable text.
+/// `titleSmall` (16, the lime section label of the prototype) matches
+/// `bodyLarge` in size but not in weight or colour, and `titleMedium` (18, card
+/// and section titles) is deliberately *above* `bodyLarge` (16), so a title
+/// never comes out smaller than the paragraph under it. The choice is
+/// deliberate and easy to defend: same design, readable text.
 class AppTheme {
   AppTheme._();
 

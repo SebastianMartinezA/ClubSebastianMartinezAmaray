@@ -6,7 +6,7 @@ perfiles de usuarios. Es el backend de la app móvil en Flutter (esa parte la ha
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Pydantic v2
 - **Auth:** JWT propio, contraseñas con bcrypt (modo alternativo con Firebase Auth, apagado por defecto)
 - **Documentación:** Swagger UI en `/docs` y esquema OpenAPI en `/openapi.json`
-- **Tests:** 107 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
+- **Tests:** 108 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
 
 ---
 
@@ -98,9 +98,9 @@ docker exec tp-pg-test psql -U test -d postgres -c 'CREATE DATABASE club_verify'
 DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
 ```
 
-Resultado esperado: **107 passed**. Uno de los tests de reservas se saltea si la suite corre antes de
-las 09:00 locales (depende de la hora por el horario de la sede), así que de madrugada puede dar
-`106 passed, 1 skipped`: es el mismo resultado. Entre los tests están:
+Resultado esperado: **108 tests**, de los cuales **107 passed** y uno se saltea si la suite corre antes
+de las 09:00 locales (depende de la hora por el horario de la sede), así que de madrugada puede dar
+`107 passed, 1 skipped`: es el mismo resultado. Entre los tests están:
 
 - las 14 reglas de negocio (duración, granularidad horaria, horario de la sede, futuro,
   solapamiento, cancelación que libera el horario, historial, correo no editable, etc.);
@@ -241,7 +241,7 @@ backend/
     seed.py            # datos de ejemplo idempotentes
     routers/           # auth, users, venues, spaces, reservations, devices
     services/          # reservations (reglas de negocio), notifications (push)
-  tests/               # 107 tests
+  tests/               # 108 tests
   docs/                # modelo-datos.md, api.md
   requirements.txt  Dockerfile  render.yaml  .env.example  README.md  openapi.json
 ```
