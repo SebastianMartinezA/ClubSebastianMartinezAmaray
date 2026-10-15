@@ -54,9 +54,9 @@ la API desplegada, se cambia el valor de `API_BASE_URL`.
 ## Tests
 
 ```bash
-# Backend: 108 tests (reglas de negocio, validaciones de perfil, errores, concurrencia y zona horaria)
+# Backend: 116 tests (reglas de negocio, validaciones de perfil, errores, concurrencia y zona horaria)
 cd backend && DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
-# 107 pasan; 1 se saltea según la hora a la que se corra (reserva de un horario ya pasado del día)
+# 115 pasan; 1 se saltea según la hora a la que se corra (reserva de un horario ya pasado del día)
 
 # App
 cd app && flutter test
@@ -79,8 +79,12 @@ de eso tarda alrededor de un minuto.
   mostrar funcionando en la defensa. El backend tiene además un modo opcional con ID tokens de Firebase
   Auth, apagado por defecto (`AUTH_PROVIDER=firebase`).
 - **Notificaciones push**: la API registra los tokens de dispositivo y tiene el job que detecta las
-  reservas próximas. El envío real por Firebase Cloud Messaging se activa cuando hay credenciales
-  (`FCM_SERVICE_ACCOUNT_JSON`); sin ellas, el job registra la intención y no falla.
+  reservas próximas (ventana de una hora, comparada como fecha y hora, y sin repetir un aviso ya
+  enviado). El envío por FCM está implementado del lado del backend y se activa al cargar las
+  credenciales (`FCM_SERVICE_ACCOUNT_JSON`); sin ellas, el job registra la intención y no falla.
+  Del lado de la app el cliente de `firebase_messaging` está escrito pero **desactivado** a
+  propósito: sin un proyecto de Firebase habilitado no hay `google-services.json` para compilar.
+  Cerrar ese circuito (proyecto de Firebase + credenciales) queda pendiente.
 - **Disponibilidad de reservas**: la validación y la inserción son atómicas (bloqueo de la fila del
   espacio), así que dos pedidos simultáneos del mismo horario no pueden crear dos reservas.
 - **Zona horaria**: las reservas son horas de pared de la sede. El backend usa `TIMEZONE`

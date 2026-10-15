@@ -114,7 +114,25 @@ class FutureViewState<T> extends State<FutureView<T>> {
 
     final bool empty = widget.isEmpty?.call(data) ?? false;
     if (empty && !_loading) {
-      return EmptyView(message: widget.emptyMessage, icon: widget.emptyIcon);
+      // The empty state is refreshable too: without this the only way out was leaving the
+      // screen and coming back.
+      return RefreshIndicator(
+        onRefresh: reload,
+        child: LayoutBuilder(
+          builder: (BuildContext _, BoxConstraints constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: EmptyView(
+                  message: widget.emptyMessage,
+                  icon: widget.emptyIcon,
+                ),
+              ),
+            );
+          },
+        ),
+      );
     }
 
     return Stack(

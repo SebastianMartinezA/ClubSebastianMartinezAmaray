@@ -1,6 +1,10 @@
 """Formato consistente de errores (regla 14) y manejo de errores de transporte."""
 
+import logging
+
 import pytest
+
+from app.config import get_settings
 
 
 def _assert_cuerpo(response, code_esperado=None):
@@ -141,3 +145,44 @@ def test_rutas_protegidas_sin_token_dan_401(client, metodo, ruta):
         response = getattr(client, metodo)(ruta)
     assert response.status_code == 401, f"{metodo.upper()} {ruta} -> {response.status_code}"
     _assert_cuerpo(response, "missing_token")
+
+
+def test_el_token_de_recuperacion_no_se_escribe_en_los_logs(client, caplog, monkeypatch, demo_credentials):
+    """Sin SMTP y sin debug, el token no viaja ni en la respuesta ni en el log."""
+    monkeypatch.setattr(get_settings(), "debug", False)
+
+    with caplog.at_level(logging.INFO):
+        response = client.post("/auth/forgot-password", json={"email": demo_credentials["email"]})
+
+    assert response.status_code == 200
+    assert response.json()["reset_token"] is None
+    assert "Token de recuperación" not in caplog.text
+
+
+def test_el_openapi_documenta_los_errores_que_la_api_devuelve(client):
+    """El esquema no puede prometer un 422 que la API nunca devuelve, y debe declarar los
+    errores de negocio de cada operación."""
+    schema = client.get("/openapi.json").json()
+
+    con_422 = [
+        f"{metodo.upper()} {ruta}"
+        for ruta, operaciones in schema["paths"].items()
+        for metodo, operacion in operaciones.items()
+        if isinstance(operacion, dict) and "422" in (operacion.get("responses") or {})
+    ]
+    assert con_422 == [], f"operaciones que documentan un 422 que la API no devuelve: {con_422}"
+
+    assert "ErrorOut" in schema["components"]["schemas"]
+
+    crear_reserva = schema["paths"]["/reservations"]["post"]["responses"]
+    assert {"400", "401", "404", "409"} <= set(crear_reserva)
+
+    disponibilidad = schema["paths"]["/venues/{venue_id}/availability"]["get"]["responses"]
+    assert {"400", "404"} <= set(disponibilidad)
+
+
+def test_health_verifica_la_base(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+    assert response.json()["database"] == "ok"

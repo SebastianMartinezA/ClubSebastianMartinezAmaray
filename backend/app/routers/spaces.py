@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
-from ..errors import NotFoundError
+from ..errors import NotFoundError, documented_errors
 from ..models import SportSpace, Venue
 from ..schemas import SportSpaceOut
 
@@ -35,7 +35,12 @@ def _normalize_type(value: str) -> str:
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).strip().lower()
 
 
-@router.get("", response_model=list[SportSpaceOut], summary="Listar espacios deportivos (filtro por tipo)")
+@router.get(
+    "",
+    response_model=list[SportSpaceOut],
+    responses=documented_errors(400),
+    summary="Listar espacios deportivos (filtro por tipo)",
+)
 def list_spaces(
     type: str | None = Query(
         default=None,
@@ -61,7 +66,12 @@ def list_spaces(
     return [_to_out(space) for space in spaces]
 
 
-@router.get("/{space_id}", response_model=SportSpaceOut, summary="Detalle de un espacio deportivo")
+@router.get(
+    "/{space_id}",
+    response_model=SportSpaceOut,
+    responses=documented_errors(404),
+    summary="Detalle de un espacio deportivo",
+)
 def get_space(space_id: int, db: Session = Depends(get_db)) -> SportSpaceOut:
     space = db.get(SportSpace, space_id)
     # Un espacio inactivo no existe para el usuario, y tampoco si su sede está inactiva: 404,

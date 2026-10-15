@@ -114,9 +114,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (BuildContext _) => const VenuesScreen()),
-        ),
+        // Coming back from the booking flow the list has to show what was just booked:
+        // without waiting for the pop, the screen kept the previous state.
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (BuildContext _) => const VenuesScreen()),
+          );
+          await _reload();
+        },
         icon: const Icon(Icons.add),
         label: const Text('Reservar'),
       ),

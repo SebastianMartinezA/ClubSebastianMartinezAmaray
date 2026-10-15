@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +29,14 @@ Future<void> main() async {
   final DeviceService devices = DeviceService(api);
   final PushService push = PushService(deviceService: devices);
   final Session session = Session(api: api, auth: auth, push: push);
+
+  // The free tier of Render sleeps the service after 15 minutes without
+  // requests and the first one takes close to a minute; waking it up here,
+  // while the user looks at the splash screen, keeps that first request from
+  // dying on the 15 second timeout. The result is ignored on purpose: if the
+  // service does not wake up, the screen that made the real request shows the
+  // error a few seconds later.
+  unawaited(api.warmUp());
 
   // When a `401` arrives (expired or invalid token) the session closes itself;
   // this hook is what actually takes the user back to the login screen. It uses

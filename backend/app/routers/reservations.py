@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..clock import now_local
 from ..database import get_db
+from ..errors import documented_errors
 from ..models import User
 from ..schemas import ReservationCreate, ReservationOut
 from ..security import get_current_user
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/reservations", tags=["Reservas"])
     "",
     response_model=ReservationOut,
     status_code=status.HTTP_201_CREATED,
+    responses=documented_errors(400, 401, 404, 409),
     summary="Crear una reserva (valida disponibilidad de forma atómica)",
 )
 def create(
@@ -44,7 +46,12 @@ def create(
     return to_reservation_out(reservation)
 
 
-@router.get("", response_model=list[ReservationOut], summary="Listar mis reservas vigentes")
+@router.get(
+    "",
+    response_model=list[ReservationOut],
+    responses=documented_errors(401),
+    summary="Listar mis reservas vigentes",
+)
 def list_active(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[ReservationOut]:
@@ -57,6 +64,7 @@ def list_active(
 @router.get(
     "/history",
     response_model=list[ReservationOut],
+    responses=documented_errors(401),
     summary="Historial: reservas terminadas y canceladas",
 )
 def history(
@@ -68,7 +76,12 @@ def history(
     ]
 
 
-@router.post("/{reservation_id}/cancel", response_model=ReservationOut, summary="Cancelar una reserva")
+@router.post(
+    "/{reservation_id}/cancel",
+    response_model=ReservationOut,
+    responses=documented_errors(400, 401, 404),
+    summary="Cancelar una reserva",
+)
 def cancel(
     reservation_id: int,
     current_user: User = Depends(get_current_user),

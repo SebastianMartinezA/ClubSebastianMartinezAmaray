@@ -1,1 +1,1678 @@
-{"openapi":"3.1.0","info":{"title":"ClubSebastianMartinezAmaray API","description":"API REST para la gestión de espacios deportivos: reservas, sedes, espacios deportivos y perfiles de usuario. Autenticación con JWT propio (bcrypt) y, opcionalmente, ID tokens de Firebase Auth.","version":"2.0.0"},"paths":{"/auth/register":{"post":{"tags":["Autenticación"],"summary":"Registrar un usuario","operationId":"register_auth_register_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserRegister"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/auth/login":{"post":{"tags":["Autenticación"],"summary":"Iniciar sesión","operationId":"login_auth_login_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserLogin"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/auth/forgot-password":{"post":{"tags":["Autenticación"],"summary":"Pedir el token de recuperación de contraseña","operationId":"forgot_password_auth_forgot_password_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ForgotPasswordRequest"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ForgotPasswordResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/auth/reset-password":{"post":{"tags":["Autenticación"],"summary":"Restablecer la contraseña","operationId":"reset_password_auth_reset_password_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ResetPasswordRequest"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/MessageOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/auth/me":{"get":{"tags":["Autenticación"],"summary":"Usuario autenticado (alias de /users/me)","operationId":"read_me_auth_me_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserOut"}}}}},"security":[{"HTTPBearer":[]}]}},"/users/me":{"get":{"tags":["Usuarios"],"summary":"Ver mi perfil","operationId":"read_profile_users_me_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserOut"}}}}},"security":[{"HTTPBearer":[]}]},"patch":{"tags":["Usuarios"],"summary":"Editar mi perfil (el correo no se puede cambiar)","operationId":"update_profile_users_me_patch","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserUpdate"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"HTTPBearer":[]}]}},"/venues":{"get":{"tags":["Sedes"],"summary":"Listar sedes con sus horarios","operationId":"list_venues_venues_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/VenueOut"},"type":"array","title":"Response List Venues Venues Get"}}}}}}},"/venues/{venue_id}":{"get":{"tags":["Sedes"],"summary":"Detalle de una sede","operationId":"get_venue_venues__venue_id__get","parameters":[{"name":"venue_id","in":"path","required":true,"schema":{"type":"integer","title":"Venue Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VenueOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/venues/{venue_id}/spaces":{"get":{"tags":["Sedes"],"summary":"Espacios deportivos de una sede","operationId":"list_venue_spaces_venues__venue_id__spaces_get","parameters":[{"name":"venue_id","in":"path","required":true,"schema":{"type":"integer","title":"Venue Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/SportSpaceOut"},"title":"Response List Venue Spaces Venues  Venue Id  Spaces Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/venues/{venue_id}/availability":{"get":{"tags":["Sedes"],"summary":"Disponibilidad de los espacios de la sede para una fecha","operationId":"get_venue_availability_venues__venue_id__availability_get","parameters":[{"name":"venue_id","in":"path","required":true,"schema":{"type":"integer","title":"Venue Id"}},{"name":"date","in":"query","required":true,"schema":{"type":"string","format":"date","description":"Fecha a consultar (YYYY-MM-DD)","title":"Date"},"description":"Fecha a consultar (YYYY-MM-DD)"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VenueAvailability"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/spaces":{"get":{"tags":["Espacios deportivos"],"summary":"Listar espacios deportivos (filtro por tipo)","operationId":"list_spaces_spaces_get","parameters":[{"name":"type","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Tipo de espacio: acepta 'Fútbol' o 'Futbol' (no distingue acentos ni mayúsculas).","title":"Type"},"description":"Tipo de espacio: acepta 'Fútbol' o 'Futbol' (no distingue acentos ni mayúsculas)."},{"name":"venue_id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"description":"Filtrar por sede","title":"Venue Id"},"description":"Filtrar por sede"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/SportSpaceOut"},"title":"Response List Spaces Spaces Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/spaces/{space_id}":{"get":{"tags":["Espacios deportivos"],"summary":"Detalle de un espacio deportivo","operationId":"get_space_spaces__space_id__get","parameters":[{"name":"space_id","in":"path","required":true,"schema":{"type":"integer","title":"Space Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SportSpaceOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/reservations":{"get":{"tags":["Reservas"],"summary":"Listar mis reservas vigentes","operationId":"list_active_reservations_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/ReservationOut"},"type":"array","title":"Response List Active Reservations Get"}}}}},"security":[{"HTTPBearer":[]}]},"post":{"tags":["Reservas"],"summary":"Crear una reserva (valida disponibilidad de forma atómica)","operationId":"create_reservations_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReservationCreate"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReservationOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"HTTPBearer":[]}]}},"/reservations/history":{"get":{"tags":["Reservas"],"summary":"Historial: reservas terminadas y canceladas","operationId":"history_reservations_history_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/ReservationOut"},"type":"array","title":"Response History Reservations History Get"}}}}},"security":[{"HTTPBearer":[]}]}},"/reservations/{reservation_id}/cancel":{"post":{"tags":["Reservas"],"summary":"Cancelar una reserva","operationId":"cancel_reservations__reservation_id__cancel_post","security":[{"HTTPBearer":[]}],"parameters":[{"name":"reservation_id","in":"path","required":true,"schema":{"type":"integer","title":"Reservation Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReservationOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/devices":{"get":{"tags":["Dispositivos"],"summary":"Listar mis dispositivos registrados","operationId":"list_devices_devices_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/DeviceTokenOut"},"type":"array","title":"Response List Devices Devices Get"}}}}},"security":[{"HTTPBearer":[]}]},"post":{"tags":["Dispositivos"],"summary":"Registrar el token de notificaciones del dispositivo","operationId":"register_device_devices_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DeviceTokenCreate"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/DeviceTokenOut"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"HTTPBearer":[]}]}},"/":{"get":{"tags":["Estado"],"summary":"Información básica del servicio","operationId":"root__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"additionalProperties":{"type":"string"},"type":"object","title":"Response Root  Get"}}}}}}},"/health":{"get":{"tags":["Estado"],"summary":"Healthcheck","operationId":"health_health_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"additionalProperties":{"type":"string"},"type":"object","title":"Response Health Health Get"}}}}}}}},"components":{"schemas":{"AvailabilitySlot":{"properties":{"start_time":{"type":"string","format":"time","title":"Start Time"},"end_time":{"type":"string","format":"time","title":"End Time"},"available":{"type":"boolean","title":"Available"}},"type":"object","required":["start_time","end_time","available"],"title":"AvailabilitySlot"},"DeviceTokenCreate":{"properties":{"token":{"type":"string","maxLength":512,"minLength":8,"title":"Token"},"platform":{"type":"string","maxLength":20,"title":"Platform","default":"android"}},"type":"object","required":["token"],"title":"DeviceTokenCreate"},"DeviceTokenOut":{"properties":{"id":{"type":"integer","title":"Id"},"token":{"type":"string","title":"Token"},"platform":{"type":"string","title":"Platform"},"created_at":{"type":"string","format":"date-time","title":"Created At"}},"type":"object","required":["id","token","platform","created_at"],"title":"DeviceTokenOut"},"ForgotPasswordRequest":{"properties":{"email":{"type":"string","format":"email","title":"Email"}},"type":"object","required":["email"],"title":"ForgotPasswordRequest"},"ForgotPasswordResponse":{"properties":{"message":{"type":"string","title":"Message"},"reset_token":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Reset Token"}},"type":"object","required":["message"],"title":"ForgotPasswordResponse"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"MessageOut":{"properties":{"detail":{"type":"string","title":"Detail"},"code":{"type":"string","title":"Code"}},"type":"object","required":["detail","code"],"title":"MessageOut"},"ReservationCreate":{"properties":{"sport_space_id":{"type":"integer","title":"Sport Space Id"},"date":{"type":"string","format":"date","title":"Date"},"start_time":{"type":"string","format":"time","title":"Start Time"},"end_time":{"type":"string","format":"time","title":"End Time"}},"type":"object","required":["sport_space_id","date","start_time","end_time"],"title":"ReservationCreate"},"ReservationOut":{"properties":{"id":{"type":"integer","title":"Id"},"sport_space_id":{"type":"integer","title":"Sport Space Id"},"space_name":{"type":"string","title":"Space Name"},"venue_id":{"type":"integer","title":"Venue Id"},"venue_name":{"type":"string","title":"Venue Name"},"date":{"type":"string","format":"date","title":"Date"},"start_time":{"type":"string","format":"time","title":"Start Time"},"end_time":{"type":"string","format":"time","title":"End Time"},"status":{"$ref":"#/components/schemas/ReservationStatus"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"cancelled_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Cancelled At"}},"type":"object","required":["id","sport_space_id","space_name","venue_id","venue_name","date","start_time","end_time","status","created_at"],"title":"ReservationOut"},"ReservationStatus":{"type":"string","enum":["active","cancelled"],"title":"ReservationStatus","description":"Una reserva activa ocupa el horario; una cancelada lo libera (no se borra)."},"ResetPasswordRequest":{"properties":{"token":{"type":"string","maxLength":512,"minLength":8,"title":"Token"},"new_password":{"type":"string","maxLength":72,"minLength":8,"title":"New Password"}},"type":"object","required":["token","new_password"],"title":"ResetPasswordRequest"},"SpaceAvailability":{"properties":{"space":{"$ref":"#/components/schemas/SportSpaceOut"},"slots":{"items":{"$ref":"#/components/schemas/AvailabilitySlot"},"type":"array","title":"Slots"}},"type":"object","required":["space","slots"],"title":"SpaceAvailability"},"SportSpaceOut":{"properties":{"id":{"type":"integer","title":"Id"},"venue_id":{"type":"integer","title":"Venue Id"},"venue_name":{"type":"string","title":"Venue Name"},"name":{"type":"string","title":"Name"},"space_type":{"type":"string","title":"Space Type"},"number":{"type":"integer","title":"Number"}},"type":"object","required":["id","venue_id","venue_name","name","space_type","number"],"title":"SportSpaceOut"},"TokenResponse":{"properties":{"access_token":{"type":"string","title":"Access Token"},"token_type":{"type":"string","title":"Token Type","default":"bearer"},"expires_in":{"type":"integer","title":"Expires In"},"user":{"$ref":"#/components/schemas/UserOut"}},"type":"object","required":["access_token","expires_in","user"],"title":"TokenResponse"},"UserLogin":{"properties":{"email":{"type":"string","format":"email","title":"Email"},"password":{"type":"string","maxLength":72,"minLength":1,"title":"Password"}},"type":"object","required":["email","password"],"title":"UserLogin"},"UserOut":{"properties":{"id":{"type":"integer","title":"Id"},"email":{"type":"string","format":"email","title":"Email"},"first_name":{"type":"string","title":"First Name"},"last_name":{"type":"string","title":"Last Name"},"birth_date":{"anyOf":[{"type":"string","format":"date"},{"type":"null"}],"title":"Birth Date"},"created_at":{"type":"string","format":"date-time","title":"Created At"}},"type":"object","required":["id","email","first_name","last_name","created_at"],"title":"UserOut"},"UserRegister":{"properties":{"email":{"type":"string","format":"email","title":"Email"},"password":{"type":"string","maxLength":72,"minLength":8,"title":"Password","description":"Mínimo 8 caracteres"},"first_name":{"type":"string","maxLength":100,"minLength":1,"title":"First Name"},"last_name":{"type":"string","maxLength":100,"minLength":1,"title":"Last Name"},"birth_date":{"anyOf":[{"type":"string","format":"date"},{"type":"null"}],"title":"Birth Date"}},"type":"object","required":["email","password","first_name","last_name"],"title":"UserRegister"},"UserUpdate":{"properties":{"first_name":{"anyOf":[{"type":"string","maxLength":100,"minLength":1},{"type":"null"}],"title":"First Name"},"last_name":{"anyOf":[{"type":"string","maxLength":100,"minLength":1},{"type":"null"}],"title":"Last Name"},"birth_date":{"anyOf":[{"type":"string","format":"date"},{"type":"null"}],"title":"Birth Date"},"email":{"anyOf":[{"type":"string","format":"email"},{"type":"null"}],"title":"Email"}},"type":"object","title":"UserUpdate","description":"El correo se acepta solo para poder rechazarlo con 400 si intenta cambiarse."},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"},"VenueAvailability":{"properties":{"venue":{"$ref":"#/components/schemas/VenueOut"},"date":{"type":"string","format":"date","title":"Date"},"spaces":{"items":{"$ref":"#/components/schemas/SpaceAvailability"},"type":"array","title":"Spaces"}},"type":"object","required":["venue","date","spaces"],"title":"VenueAvailability"},"VenueOut":{"properties":{"id":{"type":"integer","title":"Id"},"name":{"type":"string","title":"Name"},"address":{"type":"string","title":"Address"},"opening_time":{"type":"string","format":"time","title":"Opening Time"},"closing_time":{"type":"string","format":"time","title":"Closing Time"}},"type":"object","required":["id","name","address","opening_time","closing_time"],"title":"VenueOut"}},"securitySchemes":{"HTTPBearer":{"type":"http","scheme":"bearer"}}},"tags":[{"name":"Estado","description":"Chequeos de disponibilidad del servicio."},{"name":"Autenticación","description":"Registro, login y recuperación de contraseña."},{"name":"Usuarios","description":"Perfil del usuario autenticado."},{"name":"Sedes","description":"Sedes, sus espacios y disponibilidad por fecha."},{"name":"Espacios deportivos","description":"Listado y filtrado de espacios."},{"name":"Reservas","description":"Alta, listado, historial y cancelación de reservas."},{"name":"Dispositivos","description":"Tokens de notificaciones push."}]}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ClubSebastianMartinezAmaray API",
+    "description": "API REST para la gestión de espacios deportivos: reservas, sedes, espacios deportivos y perfiles de usuario. Autenticación con JWT propio (bcrypt) y, opcionalmente, ID tokens de Firebase Auth.",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Registrar un usuario",
+        "operationId": "register_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Pedir el token de recuperación de contraseña",
+        "operationId": "forgot_password_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Restablecer la contraseña",
+        "operationId": "reset_password_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Usuario autenticado (alias de /users/me)",
+        "operationId": "read_me_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Ver mi perfil",
+        "operationId": "read_profile_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Editar mi perfil (el correo no se puede cambiar)",
+        "operationId": "update_profile_users_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/venues": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Listar sedes con sus horarios",
+        "operationId": "list_venues_venues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VenueOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Venues Venues Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venue_id}": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Detalle de una sede",
+        "operationId": "get_venue_venues__venue_id__get",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Venue Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venue_id}/spaces": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Espacios deportivos de una sede",
+        "operationId": "list_venue_spaces_venues__venue_id__spaces_get",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Venue Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SportSpaceOut"
+                  },
+                  "title": "Response List Venue Spaces Venues  Venue Id  Spaces Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venue_id}/availability": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Disponibilidad de los espacios de la sede para una fecha",
+        "operationId": "get_venue_availability_venues__venue_id__availability_get",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Venue Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Fecha a consultar (YYYY-MM-DD)",
+              "title": "Date"
+            },
+            "description": "Fecha a consultar (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueAvailability"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/spaces": {
+      "get": {
+        "tags": [
+          "Espacios deportivos"
+        ],
+        "summary": "Listar espacios deportivos (filtro por tipo)",
+        "operationId": "list_spaces_spaces_get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Tipo de espacio: acepta 'Fútbol' o 'Futbol' (no distingue acentos ni mayúsculas).",
+              "title": "Type"
+            },
+            "description": "Tipo de espacio: acepta 'Fútbol' o 'Futbol' (no distingue acentos ni mayúsculas)."
+          },
+          {
+            "name": "venue_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por sede",
+              "title": "Venue Id"
+            },
+            "description": "Filtrar por sede"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SportSpaceOut"
+                  },
+                  "title": "Response List Spaces Spaces Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/spaces/{space_id}": {
+      "get": {
+        "tags": [
+          "Espacios deportivos"
+        ],
+        "summary": "Detalle de un espacio deportivo",
+        "operationId": "get_space_spaces__space_id__get",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Space Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportSpaceOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reservations": {
+      "get": {
+        "tags": [
+          "Reservas"
+        ],
+        "summary": "Listar mis reservas vigentes",
+        "operationId": "list_active_reservations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReservationOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Active Reservations Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Reservas"
+        ],
+        "summary": "Crear una reserva (valida disponibilidad de forma atómica)",
+        "operationId": "create_reservations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReservationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/reservations/history": {
+      "get": {
+        "tags": [
+          "Reservas"
+        ],
+        "summary": "Historial: reservas terminadas y canceladas",
+        "operationId": "history_reservations_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReservationOut"
+                  },
+                  "type": "array",
+                  "title": "Response History Reservations History Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/reservations/{reservation_id}/cancel": {
+      "post": {
+        "tags": [
+          "Reservas"
+        ],
+        "summary": "Cancelar una reserva",
+        "operationId": "cancel_reservations__reservation_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reservation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Reservation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/devices": {
+      "get": {
+        "tags": [
+          "Dispositivos"
+        ],
+        "summary": "Listar mis dispositivos registrados",
+        "operationId": "list_devices_devices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceTokenOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Devices Devices Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Dispositivos"
+        ],
+        "summary": "Registrar el token de notificaciones del dispositivo",
+        "operationId": "register_device_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokenOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "summary": "Información básica del servicio",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "summary": "Healthcheck (servicio y base de datos)",
+        "description": "Verifica el servicio y la conexión con la base.\n\nSirve para despertar el despliegue antes de una demo: en el plan gratuito de Render, la\nprimera petición después de 15 minutos de inactividad tarda cerca de un minuto, y devolver\n\"ok\" sin tocar la base no probaría que el servicio quedó realmente operativo.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AvailabilitySlot": {
+        "properties": {
+          "start_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "time",
+            "title": "End Time"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_time",
+          "end_time",
+          "available"
+        ],
+        "title": "AvailabilitySlot"
+      },
+      "DeviceTokenCreate": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Token"
+          },
+          "platform": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Platform",
+            "default": "android"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "DeviceTokenCreate"
+      },
+      "DeviceTokenOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "token",
+          "platform",
+          "created_at"
+        ],
+        "title": "DeviceTokenOut"
+      },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "code"
+        ],
+        "title": "ErrorOut",
+        "description": "Cuerpo uniforme de error de la API: {\"detail\": \"...\", \"code\": \"...\"}."
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest"
+      },
+      "ForgotPasswordResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "reset_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ForgotPasswordResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MessageOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "code"
+        ],
+        "title": "MessageOut"
+      },
+      "ReservationCreate": {
+        "properties": {
+          "sport_space_id": {
+            "type": "integer",
+            "title": "Sport Space Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "time",
+            "title": "End Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport_space_id",
+          "date",
+          "start_time",
+          "end_time"
+        ],
+        "title": "ReservationCreate"
+      },
+      "ReservationOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "sport_space_id": {
+            "type": "integer",
+            "title": "Sport Space Id"
+          },
+          "space_name": {
+            "type": "string",
+            "title": "Space Name"
+          },
+          "venue_id": {
+            "type": "integer",
+            "title": "Venue Id"
+          },
+          "venue_name": {
+            "type": "string",
+            "title": "Venue Name"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "time",
+            "title": "End Time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReservationStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sport_space_id",
+          "space_name",
+          "venue_id",
+          "venue_name",
+          "date",
+          "start_time",
+          "end_time",
+          "status",
+          "created_at"
+        ],
+        "title": "ReservationOut"
+      },
+      "ReservationStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "cancelled"
+        ],
+        "title": "ReservationStatus",
+        "description": "Una reserva activa ocupa el horario; una cancelada lo libera (no se borra)."
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Token"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest"
+      },
+      "SpaceAvailability": {
+        "properties": {
+          "space": {
+            "$ref": "#/components/schemas/SportSpaceOut"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlot"
+            },
+            "type": "array",
+            "title": "Slots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "space",
+          "slots"
+        ],
+        "title": "SpaceAvailability"
+      },
+      "SportSpaceOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "venue_id": {
+            "type": "integer",
+            "title": "Venue Id"
+          },
+          "venue_name": {
+            "type": "string",
+            "title": "Venue Name"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "space_type": {
+            "type": "string",
+            "title": "Space Type"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "venue_id",
+          "venue_name",
+          "name",
+          "space_type",
+          "number"
+        ],
+        "title": "SportSpaceOut"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_in",
+          "user"
+        ],
+        "title": "TokenResponse"
+      },
+      "UserLogin": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLogin"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "created_at"
+        ],
+        "title": "UserOut"
+      },
+      "UserRegister": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 8,
+            "title": "Password",
+            "description": "Mínimo 8 caracteres"
+          },
+          "first_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Last Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "first_name",
+          "last_name"
+        ],
+        "title": "UserRegister"
+      },
+      "UserUpdate": {
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate",
+        "description": "El correo se acepta solo para poder rechazarlo con 400 si intenta cambiarse."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VenueAvailability": {
+        "properties": {
+          "venue": {
+            "$ref": "#/components/schemas/VenueOut"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceAvailability"
+            },
+            "type": "array",
+            "title": "Spaces"
+          }
+        },
+        "type": "object",
+        "required": [
+          "venue",
+          "date",
+          "spaces"
+        ],
+        "title": "VenueAvailability"
+      },
+      "VenueOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "opening_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Opening Time"
+          },
+          "closing_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Closing Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "address",
+          "opening_time",
+          "closing_time"
+        ],
+        "title": "VenueOut"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

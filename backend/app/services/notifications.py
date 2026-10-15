@@ -14,12 +14,12 @@ import time as time_module
 from datetime import datetime, timedelta
 
 import requests
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import SessionLocal
-from ..models import DeviceToken, Reservation, ReservationStatus
+from ..models import DeviceToken, NotificationLog, Reservation, ReservationStatus
 from ..clock import now_local
 
 logger = logging.getLogger(__name__)
@@ -32,28 +32,30 @@ _FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
 def find_upcoming_reservations(
     db: Session, window_minutes: int = DEFAULT_WINDOW_MINUTES, now: datetime | None = None
 ) -> list[Reservation]:
-    """Reservas activas que arrancan dentro de los próximos `window_minutes`."""
+    """Reservas activas que arrancan dentro de los próximos `window_minutes`.
+
+    La ventana se compara como fecha + hora completa. Comparar sólo la fecha dejaría entrar
+    cualquier reserva del día siguiente cuando la ventana cruza la medianoche: a las 23:30, un
+    turno de mañana a las 20:00 está a más de 20 horas, no dentro de la hora que se busca.
+    """
     now = now or now_local()
     limit = now + timedelta(minutes=window_minutes)
-    return list(
+    candidates = (
         db.execute(
             select(Reservation)
             .where(
                 Reservation.status == ReservationStatus.active,
-                or_(
-                    and_(Reservation.date > now.date(), Reservation.date <= limit.date()),
-                    and_(
-                        Reservation.date == now.date(),
-                        Reservation.start_time > now.time(),
-                        Reservation.start_time <= limit.time(),
-                    ),
-                ),
+                # Filtro grueso en SQL (sólo hoy y, si cruza la medianoche, mañana) y
+                # comparación exacta en memoria sobre ese conjunto chico.
+                Reservation.date >= now.date(),
+                Reservation.date <= limit.date(),
             )
             .order_by(Reservation.date, Reservation.start_time)
         )
         .scalars()
         .all()
     )
+    return [reservation for reservation in candidates if now < reservation.starts_at <= limit]
 
 
 def _fcm_access_token(service_account: dict) -> str | None:
@@ -114,15 +116,29 @@ def send_push(token: str, title: str, body: str, data: dict | None = None) -> bo
 
 
 def notify_upcoming_reservations(db: Session, window_minutes: int = DEFAULT_WINDOW_MINUTES) -> dict:
-    """Recorre las reservas próximas y notifica a los dispositivos del dueño de cada una."""
+    """Recorre las reservas próximas y notifica a los dispositivos del dueño de cada una.
+
+    Cada par (reserva, dispositivo) se avisa una sola vez: el envío queda registrado en
+    `notification_logs`, así volver a correr el job dentro de la misma ventana no repite el aviso.
+    """
     upcoming = find_upcoming_reservations(db, window_minutes=window_minutes)
     sent = 0
     attempted = 0
+    skipped = 0
     for reservation in upcoming:
         tokens = db.execute(
             select(DeviceToken).where(DeviceToken.user_id == reservation.user_id)
         ).scalars().all()
         for device in tokens:
+            already_sent = db.execute(
+                select(NotificationLog.id).where(
+                    NotificationLog.reservation_id == reservation.id,
+                    NotificationLog.device_token_id == device.id,
+                )
+            ).scalar_one_or_none()
+            if already_sent is not None:
+                skipped += 1
+                continue
             attempted += 1
             if send_push(
                 device.token,
@@ -131,8 +147,10 @@ def notify_upcoming_reservations(db: Session, window_minutes: int = DEFAULT_WIND
                 f"de {reservation.start_time.strftime('%H:%M')} a {reservation.end_time.strftime('%H:%M')}",
                 data={"reservation_id": reservation.id},
             ):
+                db.add(NotificationLog(reservation_id=reservation.id, device_token_id=device.id))
+                db.commit()
                 sent += 1
-    summary = {"upcoming": len(upcoming), "attempted": attempted, "sent": sent}
+    summary = {"upcoming": len(upcoming), "attempted": attempted, "sent": sent, "skipped": skipped}
     logger.info("Job de notificaciones: %s", summary)
     return summary
 

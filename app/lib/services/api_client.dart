@@ -38,6 +38,30 @@ class ApiClient {
   /// Releases the underlying HTTP connection pool.
   void close() => _client.close();
 
+  /// Wakes the deployed service up before the first real request.
+  ///
+  /// The free tier of Render puts the service to sleep after 15 minutes of
+  /// inactivity and the first request takes close to a minute: with the normal
+  /// timeout that request fails and looks like a connectivity problem of the
+  /// user. This calls `GET /health` waiting [ApiConfig.warmUpTimeout] and never
+  /// throws: if the service does not wake up, the screen that made the real
+  /// request shows the error a few seconds later.
+  Future<bool> warmUp() async {
+    try {
+      final http.Request request =
+          http.Request('GET', Uri.parse('$baseUrl${ApiConfig.healthPath}'));
+      request.headers['Accept'] = 'application/json';
+      final http.StreamedResponse streamed =
+          await _client.send(request).timeout(ApiConfig.warmUpTimeout);
+      final http.Response response = await http.Response.fromStream(streamed)
+          .timeout(ApiConfig.warmUpTimeout);
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (error) {
+      debugPrint('[ApiClient] el servicio todavía no responde: $error');
+      return false;
+    }
+  }
+
   /// `GET` returning a JSON object.
   Future<Map<String, dynamic>> getMap(
     String path, {

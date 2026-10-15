@@ -1,12 +1,13 @@
 # ClubSebastianMartinezAmaray — Backend (Entrega 2, Electiva General 3349)
 
 API REST para la gestión de espacios deportivos: reservas, sedes, espacios deportivos y
-perfiles de usuarios. Es el backend de la app móvil en Flutter (esa parte la hace otro equipo).
+perfiles de usuarios. Es el backend de la app móvil en Flutter que está en [`../app`](../app),
+en este mismo repositorio.
 
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Pydantic v2
 - **Auth:** JWT propio, contraseñas con bcrypt (modo alternativo con Firebase Auth, apagado por defecto)
 - **Documentación:** Swagger UI en `/docs` y esquema OpenAPI en `/openapi.json`
-- **Tests:** 108 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
+- **Tests:** 116 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
 
 ---
 
@@ -98,9 +99,9 @@ docker exec tp-pg-test psql -U test -d postgres -c 'CREATE DATABASE club_verify'
 DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
 ```
 
-Resultado esperado: **108 tests**, de los cuales **107 passed** y uno se saltea si la suite corre antes
+Resultado esperado: **116 tests**, de los cuales **115 passed** y uno se saltea si la suite corre antes
 de las 09:00 locales (depende de la hora por el horario de la sede), así que de madrugada puede dar
-`107 passed, 1 skipped`: es el mismo resultado. Entre los tests están:
+`115 passed, 1 skipped`: es el mismo resultado. Entre los tests están:
 
 - las 14 reglas de negocio (duración, granularidad horaria, horario de la sede, futuro,
   solapamiento, cancelación que libera el horario, historial, correo no editable, etc.);
@@ -108,6 +109,11 @@ de las 09:00 locales (depende de la hora por el horario de la sede), así que de
   dos pedidos concurrentes sobre el mismo horario y verifican que sólo uno se cree (el otro recibe 409);
 - el reloj de la sede (`tests/test_timezone.py`): con el servidor en UTC (como en Render), una reserva de
   las 22:00 en Argentina tiene que seguir siendo válida. Sin esto, el backend la rechazaba como pasada.
+- el job de avisos (`tests/test_notifications.py`): la ventana de una hora se compara como fecha y hora
+  (con la ventana cruzando la medianoche no entra un turno de mañana a las 20:00) y una reserva ya
+  avisada no se vuelve a avisar al correr el job de nuevo;
+- el esquema OpenAPI (`tests/test_errors.py`): ninguna operación documenta un 422 que la API no
+  devuelve, y las respuestas de error están declaradas con el mismo cuerpo que devuelve el handler.
 - las pruebas de regresión (`tests/test_regresiones.py`):
   `cancelled_at` en UTC, perfil sin nombres en blanco ni fechas futuras, login de cuenta inactiva sin
   filtrar, recursos inactivos con 404, filtro por tipo sin acentos y disponibilidad reservable.
@@ -196,8 +202,15 @@ python -m app.services.notifications
 ```
 
 Detecta las reservas activas que arrancan dentro de la próxima hora y les manda el push a los
-dispositivos del dueño. **Si `FCM_SERVICE_ACCOUNT_JSON` no está configurado, no falla**: registra
-el envío en el log y sigue.
+dispositivos del dueño. La ventana se compara como fecha **y** hora completas (si no, cuando la
+ventana cruza la medianoche entraría cualquier reserva del día siguiente), y cada aviso se registra
+en `notification_logs`: si el job vuelve a correr dentro de la misma franja, no repite el envío.
+**Si `FCM_SERVICE_ACCOUNT_JSON` no está configurado, no falla**: registra el envío en el log y sigue.
+
+El envío real por FCM está implementado del lado del backend (HTTP v1, sin SDK); para que el aviso
+llegue al teléfono falta el lado del cliente: la app tiene la integración de `firebase_messaging`
+escrita pero desactivada, porque no hay proyecto de Firebase habilitado todavía. Los pasos para
+activarla están en [`../app/README.md`](../app/README.md#4-activar-las-notificaciones-push-opcional).
 
 ## 9. Recuperación de contraseña
 
@@ -241,7 +254,7 @@ backend/
     seed.py            # datos de ejemplo idempotentes
     routers/           # auth, users, venues, spaces, reservations, devices
     services/          # reservations (reglas de negocio), notifications (push)
-  tests/               # 108 tests
+  tests/               # 116 tests
   docs/                # modelo-datos.md, api.md
   requirements.txt  Dockerfile  render.yaml  .env.example  README.md  openapi.json
 ```

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..errors import ValidationError
+from ..errors import ValidationError, documented_errors
 from ..models import User
 from ..schemas import UserOut, UserUpdate
 from ..security import get_current_user
@@ -12,12 +12,22 @@ from ..security import get_current_user
 router = APIRouter(prefix="/users", tags=["Usuarios"])
 
 
-@router.get("/me", response_model=UserOut, summary="Ver mi perfil")
+@router.get(
+    "/me",
+    response_model=UserOut,
+    responses=documented_errors(401),
+    summary="Ver mi perfil",
+)
 def read_profile(current_user: User = Depends(get_current_user)) -> UserOut:
     return UserOut.model_validate(current_user)
 
 
-@router.patch("/me", response_model=UserOut, summary="Editar mi perfil (el correo no se puede cambiar)")
+@router.patch(
+    "/me",
+    response_model=UserOut,
+    responses=documented_errors(400, 401),
+    summary="Editar mi perfil (el correo no se puede cambiar)",
+)
 def update_profile(
     payload: UserUpdate,
     current_user: User = Depends(get_current_user),

@@ -8,9 +8,17 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
+
+
+class ErrorOut(BaseModel):
+    """Cuerpo uniforme de error de la API: {"detail": "...", "code": "..."}."""
+
+    detail: str
+    code: str
 
 
 class DomainError(Exception):
@@ -68,6 +76,30 @@ _STATUS_CODE_NAMES = {
 
 def error_body(detail: str, code: str) -> dict[str, str]:
     return {"detail": detail, "code": code}
+
+
+# Respuestas de error tal como las devuelve la API. FastAPI no las puede deducir solo: nacen de
+# los handlers de abajo, no de la validación de la firma. Sin declararlas, Swagger muestra un 422
+# estándar que esta API nunca devuelve (el handler de validación responde 400).
+_ERROR_RESPONSES: dict[int, dict] = {
+    400: {
+        "model": ErrorOut,
+        "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+    },
+    401: {"model": ErrorOut, "description": "Falta el token o el usuario no está autenticado."},
+    403: {"model": ErrorOut, "description": "El usuario autenticado no tiene permiso sobre el recurso."},
+    404: {"model": ErrorOut, "description": "El recurso pedido no existe."},
+    409: {
+        "model": ErrorOut,
+        "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya "
+        "está reservado en ese horario).",
+    },
+}
+
+
+def documented_errors(*status_codes: int) -> dict[int, dict]:
+    """Respuestas de error para declarar en cada endpoint (ver `_ERROR_RESPONSES`)."""
+    return {status_code: _ERROR_RESPONSES[status_code] for status_code in status_codes}
 
 
 def register_exception_handlers(app: FastAPI) -> None:

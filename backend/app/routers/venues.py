@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
-from ..errors import NotFoundError
+from ..errors import NotFoundError, documented_errors
 from ..models import Venue
 from ..schemas import SportSpaceOut, VenueAvailability, VenueOut
 from ..services.reservations import build_venue_availability
@@ -31,7 +31,12 @@ def list_venues(db: Session = Depends(get_db)) -> list[VenueOut]:
     return [VenueOut.model_validate(venue) for venue in venues]
 
 
-@router.get("/{venue_id}", response_model=VenueOut, summary="Detalle de una sede")
+@router.get(
+    "/{venue_id}",
+    response_model=VenueOut,
+    responses=documented_errors(404),
+    summary="Detalle de una sede",
+)
 def get_venue(venue_id: int, db: Session = Depends(get_db)) -> VenueOut:
     return VenueOut.model_validate(_get_venue_or_404(db, venue_id))
 
@@ -39,6 +44,7 @@ def get_venue(venue_id: int, db: Session = Depends(get_db)) -> VenueOut:
 @router.get(
     "/{venue_id}/spaces",
     response_model=list[SportSpaceOut],
+    responses=documented_errors(404),
     summary="Espacios deportivos de una sede",
 )
 def list_venue_spaces(venue_id: int, db: Session = Depends(get_db)) -> list[SportSpaceOut]:
@@ -60,6 +66,7 @@ def list_venue_spaces(venue_id: int, db: Session = Depends(get_db)) -> list[Spor
 @router.get(
     "/{venue_id}/availability",
     response_model=VenueAvailability,
+    responses=documented_errors(400, 404),
     summary="Disponibilidad de los espacios de la sede para una fecha",
 )
 def get_venue_availability(

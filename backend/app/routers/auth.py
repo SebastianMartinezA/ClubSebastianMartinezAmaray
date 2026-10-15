@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import get_db
-from ..errors import ConflictError, NotFoundError, UnauthorizedError, ValidationError
+from ..errors import (
+    ConflictError,
+    NotFoundError,
+    UnauthorizedError,
+    ValidationError,
+    documented_errors,
+)
 from ..models import PasswordResetToken, User
 from ..schemas import (
     ForgotPasswordRequest,
@@ -52,6 +58,7 @@ def _normalize_email(email: str) -> str:
     "/register",
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
+    responses=documented_errors(400, 409),
     summary="Registrar un usuario",
 )
 def register(payload: UserRegister, db: Session = Depends(get_db)) -> TokenResponse:
@@ -84,7 +91,12 @@ def register(payload: UserRegister, db: Session = Depends(get_db)) -> TokenRespo
     return TokenResponse(access_token=token, expires_in=expires_in, user=UserOut.model_validate(user))
 
 
-@router.post("/login", response_model=TokenResponse, summary="Iniciar sesión")
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses=documented_errors(400, 401),
+    summary="Iniciar sesión",
+)
 def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
     email = _normalize_email(payload.email)
     user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
@@ -107,6 +119,7 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
 @router.post(
     "/forgot-password",
     response_model=ForgotPasswordResponse,
+    responses=documented_errors(400),
     summary="Pedir el token de recuperación de contraseña",
 )
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> ForgotPasswordResponse:
@@ -130,7 +143,16 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
 
     sent = send_password_reset_email(email, token, expires_minutes)
     if not sent:
-        logger.info("Token de recuperación para %s: %s", email, token)
+        # El token en claro nunca se escribe en los logs fuera de modo debug: cualquiera con
+        # acceso a esos logs podría usarlo mientras siga vigente, y el hash de la base no
+        # protege esa copia.
+        if settings.debug:
+            logger.info("Token de recuperación para %s: %s", email, token)
+        else:
+            logger.warning(
+                "No se pudo enviar el correo de recuperación a %s (SMTP sin configurar o caído).",
+                email,
+            )
 
     # Sin SMTP configurado, el token sólo viaja en la respuesta con DEBUG=true (uso en pruebas).
     return ForgotPasswordResponse(
@@ -139,7 +161,12 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     )
 
 
-@router.post("/reset-password", response_model=MessageOut, summary="Restablecer la contraseña")
+@router.post(
+    "/reset-password",
+    response_model=MessageOut,
+    responses=documented_errors(400, 404),
+    summary="Restablecer la contraseña",
+)
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)) -> MessageOut:
     record = db.execute(
         select(PasswordResetToken).where(PasswordResetToken.token_hash == hash_reset_token(payload.token))
@@ -172,6 +199,11 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     )
 
 
-@router.get("/me", response_model=UserOut, summary="Usuario autenticado (alias de /users/me)")
+@router.get(
+    "/me",
+    response_model=UserOut,
+    responses=documented_errors(401),
+    summary="Usuario autenticado (alias de /users/me)",
+)
 def read_me(current_user: User = Depends(get_current_user)) -> UserOut:
     return UserOut.model_validate(current_user)

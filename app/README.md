@@ -49,6 +49,12 @@ que pasar la IP de la computadora.
 El `AndroidManifest.xml` ya trae `INTERNET` y `usesCleartextTraffic="true"`, necesario para hablar con
 la API por HTTP en desarrollo. Para producción conviene HTTPS y quitar esa última opción.
 
+Al arrancar, la app pega un `GET /health` en segundo plano mientras se ve el splash, con un timeout
+largo (`ApiConfig.warmUpTimeout`, 90 s). Es por el plan gratuito de Render, que duerme el servicio a
+los 15 minutos sin tráfico: la primera petición puede tardar cerca de un minuto y con el timeout
+normal de 15 s (`ApiConfig.requestTimeout`) el primer login fallaba y parecía un problema de conexión
+del teléfono.
+
 ## 3. Correr y verificar
 
 ```bash
@@ -68,7 +74,10 @@ esa verificación queda pendiente hasta que lo ejecutes en una máquina con el S
 
 ## 4. Activar las notificaciones push (opcional)
 
-Vienen apagadas para que el proyecto compile sin depender de una cuenta externa.
+Vienen apagadas a propósito: `PushService.isEnabled` devuelve `false` y las dependencias de Firebase
+están comentadas en `pubspec.yaml`, para que el proyecto compile sin depender de una cuenta externa.
+El job que arma y envía el aviso ya existe del lado del backend (`POST /devices` registra el token);
+lo que falta para cerrar el circuito es esta mitad.
 
 1. En `pubspec.yaml`, descomentá `firebase_core` y `firebase_messaging`.
 2. En la consola de Firebase, registrá la app Android con el package
@@ -78,6 +87,9 @@ Vienen apagadas para que el proyecto compile sin depender de una cuenta externa.
 
 Con eso la app registra el token del dispositivo contra `POST /devices` al iniciar sesión, y el job de
 reservas próximas del backend le manda el aviso.
+
+Mientras esos cuatro pasos no estén hechos, el circuito completo (reservar y ver el push en el
+teléfono) no está probado: el backend puede enviar, pero no hay cliente que reciba.
 
 ## 5. Qué no se versiona
 

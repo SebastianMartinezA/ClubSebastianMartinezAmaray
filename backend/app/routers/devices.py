@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..errors import documented_errors
 from ..models import DeviceToken, User
 from ..schemas import DeviceTokenCreate, DeviceTokenOut
 from ..security import get_current_user
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/devices", tags=["Dispositivos"])
     "",
     response_model=DeviceTokenOut,
     status_code=status.HTTP_201_CREATED,
+    responses=documented_errors(400, 401),
     summary="Registrar el token de notificaciones del dispositivo",
 )
 def register_device(
@@ -39,7 +41,12 @@ def register_device(
     return DeviceTokenOut.model_validate(device)
 
 
-@router.get("", response_model=list[DeviceTokenOut], summary="Listar mis dispositivos registrados")
+@router.get(
+    "",
+    response_model=list[DeviceTokenOut],
+    responses=documented_errors(401),
+    summary="Listar mis dispositivos registrados",
+)
 def list_devices(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[DeviceTokenOut]:

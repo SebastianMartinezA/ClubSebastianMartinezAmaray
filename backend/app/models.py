@@ -183,7 +183,32 @@ class Reservation(Base):
         return datetime.combine(self.date, self.end_time)
 
 
+class NotificationLog(Base):
+    """Aviso push ya enviado, para que el job no lo repita en la corrida siguiente.
+
+    El par (reserva, dispositivo) es único: si el job vuelve a correr dentro de la misma
+    ventana, el aviso ya registrado se saltea en lugar de reenviarse.
+    """
+
+    __tablename__ = "notification_logs"
+    __table_args__ = (
+        UniqueConstraint(
+            "reservation_id", "device_token_id", name="uq_notification_per_reservation_device"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    reservation_id: Mapped[int] = mapped_column(
+        ForeignKey("reservations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    device_token_id: Mapped[int] = mapped_column(
+        ForeignKey("device_tokens.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 __all__ = [
+    "NotificationLog",
     "ReservationStatus",
     "User",
     "PasswordResetToken",

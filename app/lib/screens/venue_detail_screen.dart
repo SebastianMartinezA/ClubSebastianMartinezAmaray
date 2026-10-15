@@ -30,6 +30,10 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
   final GlobalKey<FutureViewState<VenueAvailability>> _futureKey =
       GlobalKey<FutureViewState<VenueAvailability>>();
 
+  /// Days ahead that can be browsed. It is the same window [showDatePicker] accepts: if the
+  /// selector could land on a date outside it, the calendar would open on an invalid date.
+  static const int _maxDaysAhead = 60;
+
   late DateTime _date;
   String? _typeFilter;
   bool _onlyFree = false;
@@ -54,13 +58,11 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
   }
 
   Future<void> _pickDate() async {
-    final DateTime now = DateTime.now();
-    final DateTime today = DateTime(now.year, now.month, now.day);
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _date,
-      firstDate: today,
-      lastDate: today.add(const Duration(days: 60)),
+      firstDate: _today,
+      lastDate: _today.add(const Duration(days: _maxDaysAhead)),
       helpText: 'Elegí el día para ver la disponibilidad',
       cancelText: 'Cancelar',
       confirmText: 'Aceptar',
@@ -70,12 +72,17 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
     }
   }
 
-  bool get _isToday {
+  DateTime get _today {
     final DateTime now = DateTime.now();
-    return _date.year == now.year &&
-        _date.month == now.month &&
-        _date.day == now.day;
+    return DateTime(now.year, now.month, now.day);
   }
+
+  bool get _isToday => _date == _today;
+
+  /// False once the last bookable day is reached: the arrows and the calendar share the same
+  /// window, so the picker can never open on a date it does not accept.
+  bool get _canGoNext =>
+      _date.isBefore(_today.add(const Duration(days: _maxDaysAhead)));
 
   Future<void> _book(SpaceAvailability item, String startTime) async {
     final bool? created = await Navigator.of(context).push<bool>(
@@ -148,6 +155,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
                 _DateSelector(
                   date: _date,
                   canGoBack: !_isToday,
+                  canGoNext: _canGoNext,
                   onPrevious: () => _changeDate(
                     _date.subtract(const Duration(days: 1)),
                   ),
@@ -272,6 +280,7 @@ class _DateSelector extends StatelessWidget {
   const _DateSelector({
     required this.date,
     required this.canGoBack,
+    required this.canGoNext,
     required this.onPrevious,
     required this.onNext,
     required this.onPick,
@@ -279,6 +288,7 @@ class _DateSelector extends StatelessWidget {
 
   final DateTime date;
   final bool canGoBack;
+  final bool canGoNext;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final VoidCallback onPick;
@@ -321,7 +331,7 @@ class _DateSelector extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.chevron_right),
               tooltip: 'Día siguiente',
-              onPressed: onNext,
+              onPressed: canGoNext ? onNext : null,
             ),
           ],
         ),

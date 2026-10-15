@@ -6,6 +6,7 @@ from datetime import date, datetime, time, timedelta
 import pytest
 from sqlalchemy import select
 
+from app.clock import now_local
 from app.database import SessionLocal
 from app.errors import ConflictError
 from app.models import Reservation, ReservationStatus, SportSpace, User, Venue
@@ -160,7 +161,9 @@ def test_reserva_en_el_pasado_da_400(client, auth_headers, paddle_space, past_da
 
 
 def test_reserva_de_hoy_con_hora_ya_pasada_da_400(client, auth_headers, paddle_space):
-    ahora = datetime.now()
+    # Mismo reloj que el backend (hora local de la sede): con el reloj del sistema, la suite
+    # cambiaba de resultado según la zona horaria de la máquina que la corriera.
+    ahora = now_local()
     if ahora.time() <= time(9, 0):
         pytest.skip("recién arranca el día: todavía no hay turnos de hoy ya vencidos")
     hoy = ahora.date().isoformat()

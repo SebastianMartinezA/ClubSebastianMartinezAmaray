@@ -21,4 +21,15 @@ class ApiConfig {
 
   /// Timeout applied to every HTTP request.
   static const Duration requestTimeout = Duration(seconds: 15);
+
+  /// Timeout of the cold start check ([ApiClient.warmUp]).
+  ///
+  /// The free tier of Render puts the service to sleep after 15 minutes of
+  /// inactivity and the first request can take close to a minute: with the
+  /// normal timeout that first request would fail and look like a connectivity
+  /// problem. Only this call waits that long.
+  static const Duration warmUpTimeout = Duration(seconds: 90);
+
+  /// Health endpoint used to wake the service up.
+  static const String healthPath = '/health';
 }
