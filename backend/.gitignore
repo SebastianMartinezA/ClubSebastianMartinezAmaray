@@ -1,0 +1,22 @@
+# Entorno y secretos
+.env
+*.env
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Base de datos / dumps locales
+*.sqlite3
+*.db
+
+# Editores / sistema
+.vscode/
+.idea/
+.DS_Store
