@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'app_navigator.dart';
 import 'screens/splash_screen.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
@@ -26,6 +27,12 @@ Future<void> main() async {
   final DeviceService devices = DeviceService(api);
   final PushService push = PushService(deviceService: devices);
   final Session session = Session(api: api, auth: auth, push: push);
+
+  // When a `401` arrives (expired or invalid token) the session closes itself;
+  // this hook is what actually takes the user back to the login screen. It uses
+  // the global `appNavigatorKey` because a `401` can surface from any service,
+  // with no widget (and so no `BuildContext`) at hand. See app_navigator.dart.
+  session.onSessionExpired = goToLogin;
 
   runApp(
     ClubApp(
@@ -60,6 +67,9 @@ class ClubApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Club Sebastián Martínez Amaray',
         debugShowCheckedModeBanner: false,
+        // Global key used by `goToLogin` (via `Session.onSessionExpired`) to
+        // send the user back to the login screen after a `401`.
+        navigatorKey: appNavigatorKey,
         theme: AppTheme.dark,
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.dark,

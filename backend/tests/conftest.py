@@ -24,9 +24,28 @@ from app.models import SportSpace, Venue  # noqa: E402
 from app.seed import DEMO_EMAIL, DEMO_PASSWORD, seed_demo_data  # noqa: E402
 
 
+def _assert_dedicated_test_database() -> None:
+    """Aborta si la base apuntada por DATABASE_URL no es exclusiva de pruebas.
+
+    La suite hace `drop_all`/`create_all` y borra filas en cada test: si se corre contra una base
+    compartida (o de producción) se lleva puesta la de otro proceso. Exigimos que el nombre de la
+    base contenga 'test' o 'verify' para que sea evidente que es una base descartable.
+    """
+    name = (engine.url.database or "").lower()
+    if "test" not in name and "verify" not in name:
+        pytest.exit(
+            f"La suite corre contra la base '{engine.url.database}', que no parece exclusiva de "
+            "pruebas. pytest hace drop_all/create_all y borra filas: DESTRUYE los datos de la base "
+            "que le indiques. Creá una base aparte cuyo nombre contenga 'test' o 'verify' "
+            "(por ejemplo `CREATE DATABASE club_test`) y apuntá DATABASE_URL ahí.",
+            returncode=2,
+        )
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _tables():
     """Crea el esquema de test al arrancar y lo borra al terminar."""
+    _assert_dedicated_test_database()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield

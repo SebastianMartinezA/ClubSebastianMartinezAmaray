@@ -24,7 +24,7 @@ class EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(icon, size: 56, color: scheme.outline),
+            Icon(icon, size: 56, color: scheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               message,

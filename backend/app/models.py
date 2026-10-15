@@ -23,6 +23,18 @@ from .database import Base
 
 
 def utcnow() -> datetime:
+    """Ahora en UTC con zona horaria.
+
+    Convención única de timestamps del sistema: TODO timestamp que el código escribe en la
+    base (`created_at`, `updated_at`, `cancelled_at`, `expires_at`, `used_at`, y el `created_at`
+    de dispositivos y tokens) es **UTC con zona horaria**. Así el dato es correcto sin importar
+    dónde corra el servidor (Render corre en UTC) y nunca queda corrido por la zona local.
+
+    La hora local de la sede (`app/clock.py::now_local`) se usa SOLO para validar reglas de
+    negocio (reserva futura, horario de la sede, duración, disponibilidad), NUNCA para escribir
+    timestamps: escribir un `now_local()` (naive) en una columna `DateTime(timezone=True)` hace
+    que PostgreSQL lo interprete como UTC y lo corra tres horas atrás.
+    """
     return datetime.now(timezone.utc)
 
 

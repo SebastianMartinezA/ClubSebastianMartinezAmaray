@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/session.dart';
+import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -37,34 +38,37 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final ThemeData theme = Theme.of(context);
+    // Background of the app (#050508), logo and name in white, and the lime
+    // reserved for the loading indicator: one accent per screen, like the rest
+    // of the design system.
     return Scaffold(
-      backgroundColor: scheme.primary,
+      backgroundColor: AppColors.bg,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(Icons.sports_tennis, size: 88, color: scheme.onPrimary),
+              const Icon(
+                Icons.sports_tennis,
+                size: 88,
+                color: AppColors.textPrimary,
+              ),
               const SizedBox(height: 20),
               Text(
                 'Club Sebastián Martínez Amaray',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: scheme.onPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
                 'Reservá tu espacio deportivo',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: scheme.onPrimary.withAlpha(230)),
+                style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 32),
-              CircularProgressIndicator(color: scheme.onPrimary),
+              const CircularProgressIndicator(color: AppColors.lime),
             ],
           ),
         ),

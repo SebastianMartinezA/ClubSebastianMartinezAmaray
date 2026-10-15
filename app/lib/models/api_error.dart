@@ -7,7 +7,6 @@ class ApiErrorCodes {
   // Auth
   static const String emailAlreadyRegistered = 'email_already_registered';
   static const String invalidCredentials = 'invalid_credentials';
-  static const String userInactive = 'user_inactive';
   static const String invalidResetToken = 'invalid_reset_token';
   static const String resetTokenUsed = 'reset_token_used';
   static const String resetTokenExpired = 'reset_token_expired';
@@ -58,7 +57,14 @@ class ApiException implements Exception {
     required this.code,
     required this.message,
     this.statusCode,
+    this.rawBody,
   });
+
+  /// Generic message for failures the server did not describe with the API's
+  /// `{"detail": ..., "code": ...}` shape (an HTML page from a proxy, a
+  /// plain-text body, an empty answer). Nothing raw ever reaches the screen.
+  static const String genericMessage =
+      'Ocurrió un error inesperado. Intentá de nuevo.';
 
   /// Machine readable code: either an [ApiErrorCodes] value or a code returned
   /// by the backend.
@@ -69,6 +75,10 @@ class ApiException implements Exception {
 
   /// HTTP status, or `null` when the request never reached the server.
   final int? statusCode;
+
+  /// Raw response body when it was NOT a JSON error object. It is kept only for
+  /// the log (see [toString]); the user always sees [message] instead.
+  final String? rawBody;
 
   /// The device could not reach the server (no internet, server down, DNS).
   factory ApiException.network() => const ApiException(
@@ -132,15 +142,19 @@ class ApiException implements Exception {
       }
     }
     if (body is String && body.trim().isNotEmpty && statusCode != null) {
+      // Not a JSON error object: an HTML page, a plain-text body... The raw
+      // text is useless (and confusing) for the user, so it is kept only for
+      // the log and a generic message is shown instead.
       return ApiException(
         code: _codeFromStatus(statusCode),
-        message: body,
+        message: genericMessage,
         statusCode: statusCode,
+        rawBody: body,
       );
     }
     return ApiException(
       code: _codeFromStatus(statusCode),
-      message: 'La operación no se pudo completar.',
+      message: genericMessage,
       statusCode: statusCode,
     );
   }
@@ -194,5 +208,8 @@ class ApiException implements Exception {
   }
 
   @override
-  String toString() => 'ApiException($code, status: $statusCode): $message';
+  String toString() {
+    final String raw = rawBody == null ? '' : ' rawBody: $rawBody';
+    return 'ApiException($code, status: $statusCode): $message$raw';
+  }
 }

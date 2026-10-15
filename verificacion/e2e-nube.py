@@ -7,7 +7,7 @@ para no chocar con reservas reales.
 import json
 import urllib.error
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 BASE = "https://clubsebastianmartinezamaray-api.onrender.com"
 DEMO = ("demo@club.com", "Demo1234!")
@@ -60,6 +60,12 @@ st, espacios = req("GET", f"/venues/{sedes[0]['id']}/spaces")
 check("espacios de la sede", st, 200)
 espacio = espacios[0]
 lineas.append(f"    espacio: {espacio['name']} (id {espacio['id']}, tipo {espacio.get('space_type')})")
+st_sin, con_acento = req("GET", "/spaces?type=F%C3%BAtbol")
+st_con, sin_acento = req("GET", "/spaces?type=Futbol")
+check("filtro por tipo con acento", st_sin, 200)
+check("el filtro con y sin acento devuelve lo mismo",
+      len(con_acento) if isinstance(con_acento, list) else con_acento,
+      len(sin_acento) if isinstance(sin_acento, list) else sin_acento)
 
 # 2. Registro y login
 nuevo = f"verif.{date.today().strftime('%Y%m%d')}.{datetime.now().strftime('%H%M%S')}@club.com"
@@ -85,6 +91,10 @@ st, r = req("PATCH", "/users/me", {"email": "otro@club.com"}, token=token)
 check("intentar cambiar el correo", st, 400)
 st, _ = req("GET", "/users/me")
 check("perfil sin token", st, 401)
+st, _ = req("PATCH", "/users/me", {"first_name": "   "}, token=token)
+check("perfil con nombre en blanco", st, 400)
+st, _ = req("PATCH", "/users/me", {"birth_date": "2999-01-01"}, token=token)
+check("perfil con fecha de nacimiento futura", st, 400)
 
 # 4. Reservas
 fecha = (date.today() + timedelta(days=2)).isoformat()
@@ -115,7 +125,7 @@ st, _ = req("POST", "/reservations", {**cuerpo, "date": (date.today() - timedelt
 check("reserva en el pasado", st, 400)
 st, mias = req("GET", "/reservations", token=token)
 check("listar mis reservas", st, 200)
-st, _ = req("POST", f"/reservations/{rid}/cancel", token=token)
+st, cancelada = req("POST", f"/reservations/{rid}/cancel", token=token)
 check("cancelar", st, 200)
 st, _ = req("POST", "/reservations", cuerpo, token=token)
 check("reservar de nuevo el horario liberado", st, 201)
@@ -123,6 +133,17 @@ st, hist = req("GET", "/reservations/history", token=token)
 check("historial", st, 200)
 primera = hist[0] if isinstance(hist, list) and hist else {}
 lineas.append(f"    historial: {len(hist) if isinstance(hist, list) else '?'} entradas, primera con estado {primera.get('status')}")
+
+# 4b. La cancelacion se guarda con la hora real (no corrida por zona horaria)
+if isinstance(cancelada, dict) and cancelada.get("cancelled_at"):
+    c_at = datetime.fromisoformat(str(cancelada["cancelled_at"]).replace("Z", "+00:00"))
+    cr_at = datetime.fromisoformat(str(cancelada.get("created_at", "")).replace("Z", "+00:00"))
+    check("cancelled_at no es anterior a created_at", c_at >= cr_at, True)
+    desvio = abs((datetime.now(timezone.utc) - c_at).total_seconds())
+    check("cancelled_at es la hora real (menos de 10 min de desvio)", desvio < 600, True)
+    lineas.append(f"    created_at {cancelada.get('created_at')} | cancelled_at {cancelada.get('cancelled_at')} | desvio {desvio:.0f}s")
+else:
+    check("la respuesta de cancelar trae cancelled_at", isinstance(cancelada, dict) and bool(cancelada.get("cancelled_at")), True)
 
 # 5. Aislamiento entre usuarios
 otro = f"intruso.{date.today().strftime('%Y%m%d')}.{datetime.now().strftime('%H%M%S')}@club.com"

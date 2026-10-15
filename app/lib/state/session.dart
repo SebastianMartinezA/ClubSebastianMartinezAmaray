@@ -53,6 +53,13 @@ class Session extends ChangeNotifier {
 
   AuthService get auth => _auth;
 
+  /// Hook the UI layer installs to send the user back to the login screen when
+  /// the API rejects the token.
+  ///
+  /// It is wired to the global `navigatorKey` of `main.dart` (`goToLogin`), so
+  /// this state layer keeps no reference to screens nor to a `BuildContext`.
+  void Function()? onSessionExpired;
+
   /// Reads the session stored on the device. Called by the splash screen.
   Future<bool> restore() async {
     final bool restored = await _auth.restore();
@@ -127,7 +134,13 @@ class Session extends ChangeNotifier {
 
   void _handleUnauthorized() {
     if (_status == SessionStatus.authenticated) {
+      // The token expired or is invalid: close the session and send the user
+      // back to the login screen (clearing the navigation stack). The
+      // navigation itself lives in the UI layer, reached through the hook
+      // installed by `main.dart`; without it the app would be left on a
+      // protected screen with the profile empty.
       unawaited(signOut());
+      onSessionExpired?.call();
     }
   }
 

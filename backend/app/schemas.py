@@ -7,6 +7,34 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from .models import ReservationStatus
 
+# Límites de negocio para la fecha de nacimiento (regla de perfil).
+_BIRTH_DATE_MIN = date_type(1900, 1, 1)
+
+
+def _strip_name(value: str | None) -> str | None:
+    """Recorta espacios y rechaza un nombre que quede vacío.
+
+    Misma validación para el registro y para la edición del perfil: un nombre no puede ser
+    sólo espacios (ni en el alta ni al editar).
+    """
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        raise ValueError("no puede estar vacío")
+    return value
+
+
+def _validate_birth_date(value: date_type | None) -> date_type | None:
+    """Rechaza fechas de nacimiento futuras o absurdamente viejas (< 1900)."""
+    if value is None:
+        return None
+    if value > date_type.today():
+        raise ValueError("la fecha de nacimiento no puede ser futura")
+    if value < _BIRTH_DATE_MIN:
+        raise ValueError("la fecha de nacimiento no puede ser anterior a 1900")
+    return value
+
 
 # --------------------------------------------------------------------------- #
 # Usuarios / autenticación
@@ -21,10 +49,12 @@ class UserRegister(BaseModel):
     @field_validator("first_name", "last_name")
     @classmethod
     def _strip_names(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("no puede estar vacío")
-        return value
+        return _strip_name(value)
+
+    @field_validator("birth_date")
+    @classmethod
+    def _check_birth_date(cls, value: date_type | None) -> date_type | None:
+        return _validate_birth_date(value)
 
 
 class UserLogin(BaseModel):
@@ -39,6 +69,17 @@ class UserUpdate(BaseModel):
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     birth_date: date_type | None = None
     email: EmailStr | None = None
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def _strip_names(cls, value: str | None) -> str | None:
+        # Misma validación que en el registro: un nombre no puede quedar vacío tras recortar.
+        return _strip_name(value)
+
+    @field_validator("birth_date")
+    @classmethod
+    def _check_birth_date(cls, value: date_type | None) -> date_type | None:
+        return _validate_birth_date(value)
 
 
 class UserOut(BaseModel):

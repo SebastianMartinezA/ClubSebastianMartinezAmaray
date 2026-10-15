@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Background of the adaptive launcher icon (club green). -->
-    <color name="ic_launcher_background">#0E7C3A</color>
+    <!-- Background of the adaptive launcher icon: the app background (#050508).
+         The lime accent (#D4FF00) is in the foreground. -->
+    <color name="ic_launcher_background">#050508</color>
 </resources>

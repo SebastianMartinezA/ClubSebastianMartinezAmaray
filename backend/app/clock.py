@@ -5,7 +5,9 @@ servidor rompe cuando el servidor corre en UTC (por ejemplo en Render): a las 20
 un servidor en UTC ya cree que son las 23:00 y rechaza como "pasada" una reserva de las 21:00.
 
 Acá se centraliza la zona horaria configurable (TIMEZONE) y se devuelve siempre un datetime naive
-en hora local, que es lo que comparan las reglas de negocio.
+en hora local, que es lo que comparan las reglas de negocio. Esta hora local se usa SOLO para
+validar reglas (reserva futura, horario de la sede, duración, disponibilidad): los timestamps que
+se guardan en la base son UTC con zona horaria (ver app/models.py::utcnow).
 """
 
 from datetime import datetime, timedelta, timezone
@@ -28,10 +30,3 @@ def local_tz():
 def now_local() -> datetime:
     """Ahora, en hora local de la sede y sin tzinfo (para comparar con date/time naive)."""
     return datetime.now(local_tz()).replace(tzinfo=None)
-
-
-def to_local(value: datetime) -> datetime:
-    """Convierte un datetime con zona (por ejemplo un created_at en UTC) a hora local naive."""
-    if value.tzinfo is None:
-        return value
-    return value.astimezone(local_tz()).replace(tzinfo=None)

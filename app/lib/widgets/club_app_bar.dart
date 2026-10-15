@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// App bar shared by every screen, so the look stays consistent without
-/// touching version-sensitive theme fields.
+/// App bar shared by every screen.
+///
+/// The look comes entirely from the theme's `appBarTheme` (background
+/// `#050508`, white text, flat): the bar must never be painted with the accent
+/// lime. Lima is the accent of a single element per screen — the main
+/// action — so painting the whole bar with it would break the design system
+/// (see `docs/design-system.md`, "3.1 Header" and "5.2 Cuidados al portar").
 class ClubAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ClubAppBar({
     super.key,
@@ -21,15 +26,10 @@ class ClubAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     return AppBar(
       title: Text(title),
       actions: actions,
       automaticallyImplyLeading: automaticallyImplyLeading,
-      backgroundColor: scheme.primary,
-      foregroundColor: scheme.onPrimary,
-      elevation: 0,
-      centerTitle: false,
       leading: automaticallyImplyLeading && Navigator.of(context).canPop()
           ? IconButton(
               icon: const Icon(Icons.arrow_back),

@@ -52,8 +52,8 @@ la API por HTTP en desarrollo. Para producción conviene HTTPS y quitar esa últ
 ## 3. Correr y verificar
 
 ```bash
-flutter analyze             # tiene que dar 0 problemas
-flutter test                # 16 archivos de tests
+flutter analyze             # resultado esperado: 0 problemas (ver la nota de abajo)
+flutter test                # 17 archivos de tests
 flutter run                 # con el backend levantado
 ```
 
@@ -62,7 +62,9 @@ cuatro pantallas. Se escribieron pero **no se pudieron ejecutar** en el servidor
 proyecto, porque no hay SDK de Flutter para Linux ARM64: la primera corrida de `flutter test` es tuya.
 Lo mismo con `flutter analyze` sobre la capa de interfaz: en ese servidor solo se verificó la sintaxis
 de los 44 archivos `.dart` y el tipado completo de la capa que no es de interfaz (modelos, servicios,
-estado y utilidades), con los paquetes reales.
+estado y utilidades), con los paquetes reales. **`flutter analyze` con 0 problemas es el resultado
+esperado, no algo comprobado**: en el servidor donde se armó el proyecto no se pudo correr, así que
+esa verificación queda pendiente hasta que lo ejecutes en una máquina con el SDK de Flutter.
 
 ## 4. Activar las notificaciones push (opcional)
 
@@ -86,15 +88,16 @@ reservas próximas del backend le manda el aviso.
 
 ## 6. Detalle de compatibilidad
 
-Si el analizador se queja del tipo en `cardTheme` (`lib/theme/app_theme.dart`): en Flutter 3.27 y
-posteriores el tipo se llama `CardThemeData`; en versiones anteriores, `CardTheme`. Se usó el nombre
-nuevo porque el `pubspec.yaml` pide `flutter: ">=3.24.0"` y cualquier versión actual es posterior. Si
-tu SDK es más viejo, cambiá el nombre del tipo y listo, el contenido es el mismo.
+El `pubspec.yaml` pide `flutter: ">=3.27.0"` porque `lib/theme/app_theme.dart` usa `CardThemeData`, el
+tipo que recibe `cardTheme` desde Flutter 3.27. En versiones anteriores el mismo objeto se llamaba
+`CardTheme`; esto es **historial de una decisión**, no algo que haya que cambiar: con el theme actual,
+3.24 a 3.26 no compilan.
 
 ## 7. Estructura
 
 ```
 lib/
+  app_navigator.dart         navigatorKey global: vuelve al login cuando la API responde 401
   config/     api_config.dart          dirección de la API y timeouts
   models/     los objetos que devuelve la API, con su parseo
   services/   api_client (errores centralizados) + auth, catálogo, reservas, dispositivos, push
@@ -103,7 +106,7 @@ lib/
   widgets/    13 widgets compartidos (tarjetas, chips, grilla de turnos, estados de carga y error)
   theme/      app_theme.dart: paleta y tema material 3, dark
   utils/      formateo de fechas y horas, validadores de formularios
-test/         16 archivos: modelos, servicios, utilidades, estado y pantallas
+test/         17 archivos: modelos, servicios, utilidades, estado y pantallas
 android/      proyecto Android escrito a mano (manifest, gradle, MainActivity, íconos)
 tool/         generate_icons.py: el script con el que se generó el ícono
 docs/         icon-preview.png

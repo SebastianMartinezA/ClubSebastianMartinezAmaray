@@ -18,8 +18,9 @@ router = APIRouter(prefix="/venues", tags=["Sedes"])
 
 
 def _get_venue_or_404(db: Session, venue_id: int) -> Venue:
+    # Una sede inactiva no existe para el usuario: 404, igual que list_venues (que filtra is_active).
     venue = db.get(Venue, venue_id)
-    if venue is None:
+    if venue is None or not venue.is_active:
         raise NotFoundError("La sede no existe.", code="venue_not_found")
     return venue
 
@@ -67,7 +68,9 @@ def get_venue_availability(
     db: Session = Depends(get_db),
 ) -> VenueAvailability:
     venue = db.execute(
-        select(Venue).where(Venue.id == venue_id).options(selectinload(Venue.spaces))
+        select(Venue)
+        .where(Venue.id == venue_id, Venue.is_active.is_(True))
+        .options(selectinload(Venue.spaces))
     ).scalar_one_or_none()
     if venue is None:
         raise NotFoundError("La sede no existe.", code="venue_not_found")

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import get_db
-from ..errors import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError
+from ..errors import ConflictError, NotFoundError, UnauthorizedError, ValidationError
 from ..models import PasswordResetToken, User
 from ..schemas import (
     ForgotPasswordRequest,
@@ -93,10 +93,12 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
     if user is None:
         verify_password(payload.password, _DUMMY_HASH)
         raise UnauthorizedError("Correo o contraseña incorrectos.", code="invalid_credentials")
-    if not verify_password(payload.password, user.password_hash):
+    # Regla 12: mismo 401 y mismo mensaje exista o no el correo, y también para una cuenta
+    # inactiva. Un usuario deshabilitado NO puede responder 403 `user_inactive`: eso revelaría
+    # que la cuenta existe y que la contraseña era correcta. Es coherente con get_current_user,
+    # que también trata al inactivo como 401.
+    if not verify_password(payload.password, user.password_hash) or not user.is_active:
         raise UnauthorizedError("Correo o contraseña incorrectos.", code="invalid_credentials")
-    if not user.is_active:
-        raise ForbiddenError("El usuario está deshabilitado.", code="user_inactive")
 
     token, expires_in = create_access_token(user)
     return TokenResponse(access_token=token, expires_in=expires_in, user=UserOut.model_validate(user))

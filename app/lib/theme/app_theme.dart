@@ -69,9 +69,15 @@ class SportStyle {
 /// (`light` is kept as an alias because the widget tests build with it).
 ///
 /// Note on the type scale: the prototype was measured on a compact frame and
-/// its body text came out around 11 dp. That is too small to read on a phone,
-/// so the scale below is the same hierarchy with legible sizes (15 dp body).
-/// The choice is deliberate and easy to defend: same design, readable text.
+/// its body text came out around 11 dp and its titles around 17 dp. On a phone
+/// that is too small, so the scale below is the same hierarchy with legible
+/// sizes, and every step is strictly larger than the one below it:
+///
+///   display 30 · headlines 23-26 · titles 20-21 · body 15-16 · labels 12-14
+///
+/// `titleMedium` (20) is deliberately *above* `bodyLarge` (16), so a section
+/// title never comes out smaller than the paragraph under it. The choice is
+/// deliberate and easy to defend: same design, readable text.
 class AppTheme {
   AppTheme._();
 
@@ -122,38 +128,41 @@ class AppTheme {
 
     const TextTheme text = TextTheme(
       displaySmall: TextStyle(
+        fontSize: 30,
+        fontWeight: FontWeight.w800,
+        height: 1.1,
+        color: AppColors.textHeadline,
+      ),
+      headlineMedium: TextStyle(
         fontSize: 26,
         fontWeight: FontWeight.w800,
         height: 1.15,
         color: AppColors.textHeadline,
       ),
-      headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.w800,
-        height: 1.15,
-        color: AppColors.textHeadline,
-      ),
       headlineSmall: TextStyle(
-        fontSize: 22,
+        fontSize: 23,
         fontWeight: FontWeight.w700,
         height: 1.2,
         color: AppColors.textHeadline,
       ),
       titleLarge: TextStyle(
-        fontSize: 20,
+        fontSize: 21,
         fontWeight: FontWeight.w800,
         height: 1.2,
         color: AppColors.textPrimary,
       ),
+      // Section title ("EDITAR SEDE" in the prototype): lime, tracked, and
+      // deliberately above `bodyLarge` so it never reads smaller than the text
+      // under it.
       titleMedium: TextStyle(
-        fontSize: 15,
+        fontSize: 20,
         fontWeight: FontWeight.w700,
         height: 1.25,
         letterSpacing: 1.2,
         color: AppColors.lime,
       ),
       titleSmall: TextStyle(
-        fontSize: 15,
+        fontSize: 17,
         fontWeight: FontWeight.w700,
         height: 1.2,
         color: AppColors.textPrimary,
@@ -177,19 +186,19 @@ class AppTheme {
         color: AppColors.textSecondary,
       ),
       labelLarge: TextStyle(
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: FontWeight.w800,
         letterSpacing: 0.8,
         color: AppColors.onLime,
       ),
       labelMedium: TextStyle(
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
         color: AppColors.textSecondary,
       ),
       labelSmall: TextStyle(
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 1.2,
         color: AppColors.textLabel,
@@ -317,8 +326,8 @@ class AppTheme {
       ),
 
       // ---- Cards ----
-      // `CardThemeData` is the type in Flutter >= 3.27; on older versions the
-      // same object is called `CardTheme`. See app/README.md.
+      // `CardThemeData` is the type of `cardTheme` since Flutter 3.27, which is
+      // why `pubspec.yaml` requires `flutter: ">=3.27.0"`.
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,

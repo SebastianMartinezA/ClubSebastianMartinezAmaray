@@ -180,7 +180,7 @@ class _UpcomingCard extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   Icon(Icons.event_busy_outlined,
-                      color: theme.colorScheme.outline),
+                      color: theme.colorScheme.onSurfaceVariant),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

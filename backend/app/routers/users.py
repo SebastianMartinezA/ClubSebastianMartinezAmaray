@@ -28,11 +28,13 @@ def update_profile(
             "El correo electrónico no se puede modificar.", code="email_not_editable"
         )
 
+    # Los nombres ya vienen recortados y validados por UserUpdate (no vacíos tras strip()).
     if payload.first_name is not None:
-        current_user.first_name = payload.first_name.strip()
+        current_user.first_name = payload.first_name
     if payload.last_name is not None:
-        current_user.last_name = payload.last_name.strip()
-    if payload.birth_date is not None:
+        current_user.last_name = payload.last_name
+    # model_fields_set distingue "no lo mandó" de "lo mandó en null": null borra la fecha.
+    if "birth_date" in payload.model_fields_set:
         current_user.birth_date = payload.birth_date
 
     db.commit()

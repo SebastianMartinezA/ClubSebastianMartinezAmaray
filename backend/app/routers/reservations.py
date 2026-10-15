@@ -74,5 +74,5 @@ def cancel(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ReservationOut:
-    reservation = cancel_reservation(db, current_user, reservation_id, now=now_local())
+    reservation = cancel_reservation(db, current_user, reservation_id)
     return to_reservation_out(reservation)

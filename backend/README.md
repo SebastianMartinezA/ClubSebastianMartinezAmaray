@@ -76,11 +76,14 @@ uvicorn app.main:app --reload --port 8000
 
 ## 3. Tests
 
-Los tests crean y limpian su propio esquema en la base que les pases por `DATABASE_URL`.
-Conviene usar una base aparte (acá: `club_test`).
+> ⚠️ **La suite destruye los datos de la base que le indiques.** El fixture de sesión hace
+> `drop_all`/`create_all` y borra las filas en cada test. **Usá siempre una base exclusiva y
+> descartable**, nunca una compartida ni la de producción. Para prevenir accidentes, la suite
+> aborta al arrancar si el nombre de la base apuntada por `DATABASE_URL` no contiene `test` ni
+> `verify`.
 
 ```bash
-# Postgres de prueba
+# Postgres de prueba (base exclusiva, el nombre contiene "test")
 docker run -d --rm --name tp-pg-test \
   -e POSTGRES_PASSWORD=test -e POSTGRES_USER=test -e POSTGRES_DB=club_test \
   -p 55432:5432 postgres:16-alpine
@@ -88,11 +91,14 @@ docker run -d --rm --name tp-pg-test \
 # esperar a que acepte conexiones
 docker exec tp-pg-test pg_isready -U test
 
+# (opcional) una base aparte para tus corridas
+docker exec tp-pg-test psql -U test -d postgres -c 'CREATE DATABASE club_verify'
+
 # suite completa
 DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
 ```
 
-Resultado esperado: **92 passed**. Entre los tests están:
+Resultado esperado: **107 passed**. Entre los tests están:
 
 - las 14 reglas de negocio (duración, granularidad horaria, horario de la sede, futuro,
   solapamiento, cancelación que libera el horario, historial, correo no editable, etc.);
@@ -100,6 +106,9 @@ Resultado esperado: **92 passed**. Entre los tests están:
   dos pedidos concurrentes sobre el mismo horario y verifican que sólo uno se cree (el otro recibe 409);
 - el reloj de la sede (`tests/test_timezone.py`): con el servidor en UTC (como en Render), una reserva de
   las 22:00 en Argentina tiene que seguir siendo válida. Sin esto, el backend la rechazaba como pasada.
+- los arreglos de la ronda 1 de la revisión adversarial (`tests/test_bugfixes_ronda1.py`):
+  `cancelled_at` en UTC, perfil sin nombres en blanco ni fechas futuras, login de cuenta inactiva sin
+  filtrar, recursos inactivos con 404, filtro por tipo sin acentos y disponibilidad reservable.
 
 ## 4. Docker
 
@@ -230,7 +239,7 @@ backend/
     seed.py            # datos de ejemplo idempotentes
     routers/           # auth, users, venues, spaces, reservations, devices
     services/          # reservations (reglas de negocio), notifications (push)
-  tests/               # 92 tests
+  tests/               # 107 tests
   docs/                # modelo-datos.md, api.md
   requirements.txt  Dockerfile  render.yaml  .env.example  README.md  openapi.json
 ```

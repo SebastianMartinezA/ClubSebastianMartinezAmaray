@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:club_sebastian_martinez_amaray/app_navigator.dart';
 import 'package:club_sebastian_martinez_amaray/services/api_client.dart';
 import 'package:club_sebastian_martinez_amaray/services/auth_service.dart';
 import 'package:club_sebastian_martinez_amaray/services/catalog_service.dart';
@@ -204,6 +205,9 @@ class TestApp {
       auth: auth,
       push: PushService(deviceService: devices),
     );
+    // Same wiring `main.dart` does: a `401` closes the session and sends the
+    // UI back to the login screen.
+    session.onSessionExpired = goToLogin;
   }
 
   final FakeBackend backend;
@@ -232,6 +236,8 @@ class TestApp {
         Provider<ReservationService>.value(value: reservations),
       ],
       child: MaterialApp(
+        // Same global key as `main.dart`, so `goToLogin` can navigate here too.
+        navigatorKey: appNavigatorKey,
         theme: AppTheme.light,
         home: child,
       ),

@@ -41,7 +41,7 @@ class VenueCard extends StatelessWidget {
                     Row(
                       children: <Widget>[
                         Icon(Icons.place_outlined,
-                            size: 16, color: theme.colorScheme.outline),
+                            size: 16, color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -55,7 +55,7 @@ class VenueCard extends StatelessWidget {
                     Row(
                       children: <Widget>[
                         Icon(Icons.schedule_outlined,
-                            size: 16, color: theme.colorScheme.outline),
+                            size: 16, color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           'Abierta de ${Formatters.time(venue.openingTime)} a '
@@ -67,7 +67,7 @@ class VenueCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+              Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),

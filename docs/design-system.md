@@ -341,7 +341,8 @@ de reservas, todas menos el panel admin hay que diseñarlas reutilizando este si
 ## 5. Cómo aplicarlo en Flutter
 
 ThemeData listo para copiar, coherente con lo medido. Está pensado para **Material 3** y
-**Flutter ≥ 3.24** (lo que pide el `pubspec.yaml` de la app). Los colores marcados `// estimado`
+**Flutter ≥ 3.27** (lo que pide el `pubspec.yaml` de la app: `CardThemeData`, el tipo que recibe
+`cardTheme`, existe desde 3.27). Los colores marcados `// estimado`
 o `// propuesto` son los que no pude determinar con certeza: revisalos antes de darlos por definitivos.
 
 > **Verificación:** extraje el bloque de `AppTheme` y lo pasé por `dart format`
@@ -349,11 +350,11 @@ o `// propuesto` son los que no pude determinar con certeza: revisalos antes de 
 > No hay Flutter SDK instalado en este host, así que **no pude compilarlo** ni verificar los
 > tipos del framework.
 >
-> **Notas de compatibilidad** (el `pubspec.yaml` de la app pide `flutter: ">=3.24.0"`):
-> - `CardThemeData` (en `cardTheme:`) es el tipo nuevo. En Flutter < 3.27 se llama `CardTheme`;
->   si el analizador se queja, cambiá el nombre del tipo y listo.
+> **Notas de compatibilidad** (el `pubspec.yaml` de la app pide `flutter: ">=3.27.0"`):
+> - `CardThemeData` (en `cardTheme:`) es el tipo nuevo. En Flutter < 3.27 se llamaba `CardTheme`;
+>   por eso el constraint subió a 3.27 (con `>=3.24` el proyecto no compilaba en 3.24-3.26).
 > - Usé `WidgetStateProperty` (no `MaterialStateProperty`) y los `surfaceContainer*` del
->   `ColorScheme`: son de Flutter ≥ 3.22, así que con `>=3.24` están bien.
+>   `ColorScheme`: son de Flutter ≥ 3.22, así que con `>=3.27` están bien.
 > - Las familias `'Inter'` y `'RobotoMono'` hay que declararlas en `pubspec.yaml`
 >   (o usar `google_fonts`); el código no las trae.
 

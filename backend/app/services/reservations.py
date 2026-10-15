@@ -12,7 +12,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from ..errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
-from ..models import Reservation, ReservationStatus, SportSpace, User, Venue
+from ..models import Reservation, ReservationStatus, SportSpace, User, Venue, utcnow
 from ..schemas import AvailabilitySlot, ReservationOut, SpaceAvailability
 from ..clock import now_local
 
@@ -189,9 +189,13 @@ def create_reservation(
     return reservation
 
 
-def cancel_reservation(db: Session, user: User, reservation_id: int, now: datetime | None = None) -> Reservation:
-    """Regla 8: pasa a cancelled (no se borra) y libera el horario."""
-    now = now or now_local()
+def cancel_reservation(db: Session, user: User, reservation_id: int) -> Reservation:
+    """Regla 8: pasa a cancelled (no se borra) y libera el horario.
+
+    La cancelación es un evento del sistema, así que `cancelled_at` se guarda en UTC con zona
+    horaria (misma convención que `created_at`, ver `app/models.py::utcnow`). La hora local de la
+    sede no participa: cancelar no tiene reglas de negocio que dependan del horario de la sede.
+    """
     reservation = db.get(Reservation, reservation_id)
     if reservation is None:
         raise NotFoundError("La reserva no existe.", code="reservation_not_found")
@@ -201,7 +205,7 @@ def cancel_reservation(db: Session, user: User, reservation_id: int, now: dateti
         raise ConflictError("La reserva ya estaba cancelada.", code="reservation_already_cancelled")
 
     reservation.status = ReservationStatus.cancelled
-    reservation.cancelled_at = now
+    reservation.cancelled_at = utcnow()
     db.commit()
     db.refresh(reservation)
     return reservation
@@ -259,7 +263,13 @@ def build_venue_availability(
             db, space.id, day, time.min, time.max
         )
         slots: list[AvailabilitySlot] = []
-        cursor = _combine(day, venue.opening_time)
+        # La grilla arranca en la primera hora en punto >= apertura: un turno con minutos (08:30)
+        # sería rechazado siempre por la regla de granularidad (regla 2). El corte `cursor + 1h <=
+        # cierre` garantiza que ningún turno ofrecido termine después del cierre (regla 4).
+        opening = _combine(day, venue.opening_time)
+        cursor = opening.replace(minute=0, second=0, microsecond=0)
+        if cursor < opening:
+            cursor += SLOT_SIZE
         limit = _combine(day, venue.closing_time)
         while cursor + SLOT_SIZE <= limit:
             slot_start = cursor.time()

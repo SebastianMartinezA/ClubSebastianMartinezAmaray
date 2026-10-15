@@ -23,8 +23,11 @@ class SlotChip extends StatelessWidget {
     final Color background;
     final Color foreground;
     if (!available) {
+      // Taken slot: muted text/icon on the card surface. `onSurfaceVariant`
+      // (#6C6C6E) is the measured secondary text colour; `outline` (#2A2A2D)
+      // is a border colour and would be almost invisible here (1.1:1).
       background = scheme.surfaceContainerHighest;
-      foreground = scheme.outline;
+      foreground = scheme.onSurfaceVariant;
     } else if (selected) {
       background = scheme.primary;
       foreground = scheme.onPrimary;

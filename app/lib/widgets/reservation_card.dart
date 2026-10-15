@@ -94,7 +94,7 @@ class _Line extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: <Widget>[
-          Icon(icon, size: 16, color: theme.colorScheme.outline),
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
         ],

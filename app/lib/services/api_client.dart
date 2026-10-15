@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
@@ -132,7 +133,12 @@ class ApiClient {
       return jsonDecode(text);
     } on FormatException {
       // The endpoint answered with something that is not JSON (a proxy error
-      // page, for instance): keep the text so it can be shown.
+      // page, an HTML 500, etc.). The raw text is logged only here and carried
+      // in the exception for the log: it is never shown to the user, who gets
+      // a generic Spanish message (`ApiException.genericMessage`).
+      final String snippet =
+          text.length > 280 ? '${text.substring(0, 280)}…' : text;
+      debugPrint('[ApiClient] respuesta no-JSON (${response.statusCode}): $snippet');
       return text;
     }
   }

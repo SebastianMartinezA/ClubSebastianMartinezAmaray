@@ -5,7 +5,10 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.5.0
-  flutter: ">=3.24.0"
+  # 3.27 is the first Flutter with `CardThemeData`, the type used in
+  # `lib/theme/app_theme.dart` (see the comment there). 3.24-3.26 would not
+  # compile.
+  flutter: ">=3.27.0"
 
 dependencies:
   flutter:

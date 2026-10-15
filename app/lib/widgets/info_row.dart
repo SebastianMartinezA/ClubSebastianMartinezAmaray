@@ -24,14 +24,14 @@ class InfoRow extends StatelessWidget {
           if (icon != null)
             Padding(
               padding: const EdgeInsets.only(right: 8, top: 2),
-              child: Icon(icon, size: 18, color: theme.colorScheme.outline),
+              child: Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
             ),
           SizedBox(
             width: 118,
             child: Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
