@@ -1,0 +1,179 @@
+"""Detección de reservas próximas y envío opcional de notificaciones push (FCM HTTP v1).
+
+Sin credenciales configuradas (FCM_SERVICE_ACCOUNT_JSON) el envío no se intenta: se registra en el
+log y no falla. Se puede correr como job puntual con:
+
+    python -m app.services.notifications
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import time as time_module
+from datetime import datetime, timedelta
+
+import requests
+from sqlalchemy import and_, or_, select
+from sqlalchemy.orm import Session
+
+from ..config import get_settings
+from ..database import SessionLocal
+from ..models import DeviceToken, Reservation, ReservationStatus
+from ..clock import now_local
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_WINDOW_MINUTES = 60
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
+
+
+def find_upcoming_reservations(
+    db: Session, window_minutes: int = DEFAULT_WINDOW_MINUTES, now: datetime | None = None
+) -> list[Reservation]:
+    """Reservas activas que arrancan dentro de los próximos `window_minutes`."""
+    now = now or now_local()
+    limit = now + timedelta(minutes=window_minutes)
+    return list(
+        db.execute(
+            select(Reservation)
+            .where(
+                Reservation.status == ReservationStatus.active,
+                or_(
+                    and_(Reservation.date > now.date(), Reservation.date <= limit.date()),
+                    and_(
+                        Reservation.date == now.date(),
+                        Reservation.start_time > now.time(),
+                        Reservation.start_time <= limit.time(),
+                    ),
+                ),
+            )
+            .order_by(Reservation.date, Reservation.start_time)
+        )
+        .scalars()
+        .all()
+    )
+
+
+def _fcm_access_token(service_account: dict) -> str | None:
+    """Pide un access token OAuth2 a Google firmando un JWT con la clave de la cuenta de servicio."""
+    import jwt  # import perezoso: el envío real es opcional
+
+    now = int(time_module.time())
+    claims = {
+        "iss": service_account["client_email"],
+        "scope": _FCM_SCOPE,
+        "aud": _GOOGLE_TOKEN_URL,
+        "iat": now,
+        "exp": now + 3600,
+    }
+    assertion = jwt.encode(claims, service_account["private_key"], algorithm="RS256")
+    response = requests.post(
+        _GOOGLE_TOKEN_URL,
+        data={
+            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            "assertion": assertion,
+        },
+        timeout=15,
+    )
+    response.raise_for_status()
+    return response.json().get("access_token")
+
+
+def send_push(token: str, title: str, body: str, data: dict | None = None) -> bool:
+    """Envía un push por FCM HTTP v1. Devuelve False (sin excepción) si no está configurado."""
+    settings = get_settings()
+    if not settings.fcm_configured:
+        logger.info("[push:simulado] token=%s… titulo=%r cuerpo=%r", token[:12], title, body)
+        return False
+
+    try:
+        service_account = json.loads(settings.fcm_service_account_json)
+        project_id = service_account["project_id"]
+        access_token = _fcm_access_token(service_account)
+        response = requests.post(
+            f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={
+                "message": {
+                    "token": token,
+                    "notification": {"title": title, "body": body},
+                    "data": {k: str(v) for k, v in (data or {}).items()},
+                }
+            },
+            timeout=15,
+        )
+        if response.status_code >= 400:
+            logger.warning("FCM rechazó el envío (%s): %s", response.status_code, response.text[:300])
+            return False
+        return True
+    except Exception:  # el job no puede tumbar el proceso por un push fallido
+        logger.exception("Falló el envío de push")
+        return False
+
+
+def notify_upcoming_reservations(db: Session, window_minutes: int = DEFAULT_WINDOW_MINUTES) -> dict:
+    """Recorre las reservas próximas y notifica a los dispositivos del dueño de cada una."""
+    upcoming = find_upcoming_reservations(db, window_minutes=window_minutes)
+    sent = 0
+    attempted = 0
+    for reservation in upcoming:
+        tokens = db.execute(
+            select(DeviceToken).where(DeviceToken.user_id == reservation.user_id)
+        ).scalars().all()
+        for device in tokens:
+            attempted += 1
+            if send_push(
+                device.token,
+                "Tenés una reserva próxima",
+                f"{reservation.sport_space.name} el {reservation.date} "
+                f"de {reservation.start_time.strftime('%H:%M')} a {reservation.end_time.strftime('%H:%M')}",
+                data={"reservation_id": reservation.id},
+            ):
+                sent += 1
+    summary = {"upcoming": len(upcoming), "attempted": attempted, "sent": sent}
+    logger.info("Job de notificaciones: %s", summary)
+    return summary
+
+
+def send_password_reset_email(email: str, token: str, expires_minutes: int) -> bool:
+    """Manda el correo de recuperación si SMTP está configurado. Devuelve False si no lo está."""
+    settings = get_settings()
+    if not settings.smtp_configured:
+        return False
+
+    import smtplib
+    from email.message import EmailMessage
+
+    message = EmailMessage()
+    message["Subject"] = "Recuperación de contraseña - ClubSebastianMartinezAmaray"
+    message["From"] = settings.smtp_from
+    message["To"] = email
+    message.set_content(
+        "Pediste restablecer tu contraseña.\n\n"
+        f"Usá este token en POST /auth/reset-password (vence en {expires_minutes} minutos):\n\n"
+        f"{token}\n\n"
+        "Si no fuiste vos, ignorá este mensaje."
+    )
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
+            if settings.smtp_use_tls:
+                server.starttls()
+            if settings.smtp_user:
+                server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(message)
+        return True
+    except Exception:
+        logger.exception("No se pudo enviar el correo de recuperación a %s", email)
+        return False
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    with SessionLocal() as db:
+        print(notify_upcoming_reservations(db))
+
+
+if __name__ == "__main__":
+    main()
