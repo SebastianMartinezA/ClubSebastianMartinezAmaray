@@ -38,6 +38,10 @@ class AppColors {
   static const Color success = Color(0xFF0A8A5E);
 
   // --- Sport chips (background / border / foreground) ---
+  // Background and border are the measured values. The foreground is the
+  // estimated one from the design doc: the measured trace (#028B5F for
+  // football) comes from 1 px strokes and antialiasing darkens it, which would
+  // leave the label unreadable on the dark chip. See docs/design-system.md.
   static const SportStyle sportFutbol =
       SportStyle(Color(0xFF132F28), Color(0xFF104335), Color(0xFF10B981));
   static const SportStyle sportTenis =
