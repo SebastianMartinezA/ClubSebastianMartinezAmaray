@@ -30,3 +30,8 @@ app/ios/Pods/
 .DS_Store
 .idea/
 .vscode/
+
+# Notas de proceso (no son entregables)
+BRIEF-*.md
+empaquetar-entrega2.sh
+verificacion/app_static_check/

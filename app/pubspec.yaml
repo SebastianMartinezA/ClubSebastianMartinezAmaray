@@ -1,0 +1,40 @@
+name: club_sebastian_martinez_amaray
+description: "App móvil del Club Sebastián Martínez Amaray: reservá espacios deportivos, consultá disponibilidad y gestioná tus reservas."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # HTTP client for the REST API (backend/ openapi.json).
+  http: ^1.2.0
+  # ChangeNotifier based dependency injection (simple, no code generation).
+  provider: ^6.1.2
+  # Persisted session (token + user) across app restarts.
+  shared_preferences: ^2.3.2
+  # Date formatting. Pinned to "any" so it always matches the intl version
+  # required by the flutter_localizations package of the owner's SDK.
+  intl: any
+
+  # ---------------------------------------------------------------------------
+  # Push notifications (Firebase Cloud Messaging) are OPTIONAL and disabled by
+  # default so the app builds without a Firebase project. See README.md
+  # ("Activar las notificaciones push") to enable them:
+  #
+  # firebase_core: ^3.6.0
+  # firebase_messaging: ^15.1.3
+  # ---------------------------------------------------------------------------
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
