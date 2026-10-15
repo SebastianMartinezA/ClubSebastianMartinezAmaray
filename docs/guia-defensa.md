@@ -177,9 +177,15 @@ Todas las operaciones usan la autenticación por Bearer token, y se puede probar
 ## 5. Despliegue en la nube
 
 - **API**: servicio web con Docker en Render, construido desde el repositorio.
-- **Base de datos**: PostgreSQL administrado por Render. La cadena de conexión la inyecta la plataforma
-  como variable de entorno; el backend la normaliza porque Render la entrega con el prefijo
-  `postgres://` y SQLAlchemy necesita el driver explícito.
+  URL: `https://clubsebastianmartinezamaray-api.onrender.com` (Swagger en `/docs`).
+- **Base de datos**: PostgreSQL administrado por Render, plan free, región Ohio. La cadena de conexión
+  la inyecta la plataforma como variable de entorno; el backend la normaliza porque Render la entrega
+  con el prefijo `postgres://` y SQLAlchemy necesita el driver explícito.
+- **Ojo con el plan free**: el servicio se duerme a los 15 minutos sin tráfico y la primera petición
+  después de eso tarda alrededor de un minuto en responder. Antes de la defensa, abrí `/docs` en el
+  navegador para despertarlo; no lo dejes para el momento en que tenés que mostrar la app, porque
+  parece que "no funciona" y en realidad está arrancando. Si querés, el día de la exposición se puede
+  dejar despierto con un ping cada 10 minutos.
 - **Variables de entorno**: `DATABASE_URL`, `JWT_SECRET_KEY` (generada aparte, no está en el repo),
   `TIMEZONE`, `AUTO_CREATE_TABLES`, `SEED_ON_STARTUP`, `CORS_ORIGINS`.
 - El contenedor escucha en el puerto que Render define por su cuenta (`$PORT`) y tiene un healthcheck
