@@ -1,0 +1,33 @@
+OK  health: 200 (esperado 200)
+OK  sedes: 200 (esperado 200)
+    sedes devueltas: ['Castelar', 'Moron']
+OK  espacios de la sede: 200 (esperado 200)
+    espacio: Castelar_Av._Yrigoyen_1234_Basquet_1 (id 4, tipo None)
+OK  registro usuario nuevo: 201 (esperado 201)
+OK  registro con correo repetido: 409 (esperado 409)
+OK  login con clave incorrecta: 401 (esperado 401)
+OK  login demo: 200 (esperado 200)
+OK  login devuelve token: True (esperado True)
+OK  perfil: 200 (esperado 200)
+OK  editar perfil: 200 (esperado 200)
+OK  intentar cambiar el correo: 400 (esperado 400)
+OK  perfil sin token: 401 (esperado 401)
+MAL reserva valida: 409 (esperado 201)
+OK  reserva superpuesta: 409 (esperado 409)
+    codigo de error: space_not_available
+OK  duracion menor a una hora: 400 (esperado 400)
+OK  minutos distintos de 00: 400 (esperado 400)
+OK  fuera del horario de la sede: 400 (esperado 400)
+OK  reserva en el pasado: 400 (esperado 400)
+OK  listar mis reservas: 200 (esperado 200)
+MAL cancelar: 400 (esperado 200)
+MAL reservar de nuevo el horario liberado: 409 (esperado 201)
+OK  historial: 200 (esperado 200)
+    historial: 1 entradas, primera con estado cancelled
+OK  ver la reserva de otro usuario: 404 (esperado alguno de [403, 404]) (404 = la ruta de detalle no existe)
+MAL cancelar la reserva de otro usuario: 400 (esperado 403)
+OK  swagger: 200 (esperado 200)
+OK  openapi.json: 200 (esperado 200)
+
+RESULTADO: 22 OK / 4 MAL
+VEREDICTO: HAY FALLAS
