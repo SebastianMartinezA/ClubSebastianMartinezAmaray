@@ -313,23 +313,23 @@ class AppTheme {
       ),
 
       // ---- Chips (sport filters) ----
-      chipTheme: ChipThemeData(
+      chipTheme: const ChipThemeData(
         backgroundColor: AppColors.surface,
         selectedColor: AppColors.lime,
         disabledColor: AppColors.surfaceAlt,
-        labelStyle: const TextStyle(
+        labelStyle: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
-        secondaryLabelStyle: const TextStyle(
+        secondaryLabelStyle: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
           color: AppColors.onLime,
         ),
-        side: const BorderSide(color: AppColors.borderStrong),
-        shape: const StadiumBorder(),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        side: BorderSide(color: AppColors.borderStrong),
+        shape: StadiumBorder(),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
 
       // ---- Cards ----

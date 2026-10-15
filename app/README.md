@@ -27,6 +27,27 @@ flutter pub get
 `flutter create .` completa el andamiaje del proyecto y respeta el código existente. Si te pide
 confirmación, aceptá: solo agrega los archivos faltantes de la plataforma.
 
+**Ojo con un detalle:** en un Flutter reciente, `flutter create .` también genera
+`android/build.gradle.kts`, `android/app/build.gradle.kts` y `android/settings.gradle.kts` al lado de
+los `build.gradle` escritos a mano, y borra `test/widget_test.dart` si aparece (apunta al widget raíz de
+la plantilla). Gradle prefiere el archivo `.kts` cuando existen los dos, así que si quedan los
+duplicados el proyecto deja de compilar los archivos propios. Borrá esos tres `.kts` y quedate con los
+`.gradle` del repositorio.
+
+### Versiones que necesita el toolchain
+
+El plugin de Gradle de Flutter valida estas tres versiones antes de aplicar el suyo y corta el build si
+alguna queda por debajo del mínimo. El repositorio ya viene con las tres en un valor aceptado:
+
+- **Flutter ≥ 3.27**: `lib/theme/app_theme.dart` usa `CardThemeData`, el tipo que recibe `cardTheme`
+  desde esa versión (en 3.24 a 3.26 el mismo objeto se llamaba `CardTheme` y el proyecto no compila).
+- **Gradle ≥ 8.14**: `android/gradle/wrapper/gradle-wrapper.properties` está fijado en 8.14.3.
+- **Android Gradle Plugin ≥ 8.11.1** y **Kotlin ≥ 2.2.20**: declarados en `android/settings.gradle`.
+
+Con Flutter 3.47.5 y el JDK 17, esta combinación compila. Si actualizás Flutter y el build se queja de
+una versión, el mensaje dice el mínimo exacto que pide: se cambia el número en el wrapper o en
+`settings.gradle` y se vuelve a intentar.
+
 ## 2. Apuntar la app a la API
 
 La dirección de la API se inyecta al compilar, no está en el código:
@@ -58,19 +79,26 @@ del teléfono.
 ## 3. Correr y verificar
 
 ```bash
-flutter analyze             # resultado esperado: 0 problemas (ver la nota de abajo)
-flutter test                # 16 archivos de tests (más el helper de pruebas)
-flutter run                 # con el backend levantado
+flutter analyze             # resultado: No issues found
+flutter test                # 126 tests, todos pasan
+flutter build apk --debug   # genera app-debug.apk (65 MB)
+flutter run --dart-define=API_BASE_URL=https://<tu-servicio>.onrender.com
 ```
 
 Los tests cubren modelos, servicios (con un cliente HTTP simulado), utilidades, el estado de sesión y
-cuatro pantallas. Se escribieron pero **no se pudieron ejecutar** en el servidor donde se armó el
-proyecto, porque no hay SDK de Flutter para Linux ARM64: la primera corrida de `flutter test` es tuya.
-Lo mismo con `flutter analyze` sobre la capa de interfaz: en ese servidor solo se verificó la sintaxis
-de los 45 archivos `.dart` y el tipado completo de la capa que no es de interfaz (modelos, servicios,
-estado y utilidades), con los paquetes reales. **`flutter analyze` con 0 problemas es el resultado
-esperado, no algo comprobado**: en el servidor donde se armó el proyecto no se pudo correr, así que
-esa verificación queda pendiente hasta que lo ejecutes en una máquina con el SDK de Flutter.
+cuatro pantallas.
+
+Estos comandos **ya se corrieron sobre este mismo código** en una máquina x86_64 con Flutter 3.47.5 y
+JDK 17 (Fedora 42): `flutter analyze` no reportó nada, la suite pasó completa (126 tests en 16 archivos
+más el helper), se generó el APK de depuración y la app se ejecutó conectada a la API desplegada, con
+login y datos reales en pantalla. El proyecto se escribió en un servidor Linux ARM64, donde Flutter no
+publica SDK, así que esa corrida se hizo después en otra máquina: por eso `android/` trae los archivos
+escritos a mano y no los que genera Flutter.
+
+Si no tenés un emulador o un teléfono a mano, `flutter run -d linux` levanta la misma app en el
+escritorio (antes hay que agregar el target con `flutter create --platforms=linux .`): sirve para ver la
+interfaz y el camino HTTP sin dispositivo. La carpeta `linux/` que genera ese comando no se versiona,
+porque la entrega es una app móvil.
 
 ## 4. Activar las notificaciones push (opcional)
 
@@ -118,7 +146,7 @@ lib/
   widgets/    13 widgets compartidos (tarjetas, chips, grilla de turnos, estados de carga y error)
   theme/      app_theme.dart: paleta y tema material 3, dark
   utils/      formateo de fechas y horas, validadores de formularios
-test/         16 archivos de tests (más el helper): modelos, servicios, utilidades, estado y pantallas
+test/         16 archivos de tests (más el helper): 126 tests de modelos, servicios, utilidades, estado y pantallas
 android/      proyecto Android escrito a mano (manifest, gradle, MainActivity, íconos)
 tool/         generate_icons.py: el script con el que se generó el ícono
 docs/         icon-preview.png

@@ -2,6 +2,7 @@ import 'package:club_sebastian_martinez_amaray/models/availability.dart';
 import 'package:club_sebastian_martinez_amaray/models/sport_space.dart';
 import 'package:club_sebastian_martinez_amaray/models/venue.dart';
 import 'package:club_sebastian_martinez_amaray/screens/booking_screen.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -72,6 +73,11 @@ void main() {
     // The start time chosen in the availability grid is preselected.
     expect(find.textContaining('10:00 a 11:00'), findsOneWidget);
 
+    // The confirmation button lives at the bottom of a ListView: on the
+    // default 800x600 test viewport it falls below the fold, so it has to be
+    // scrolled into view before tapping it.
+    await tester.ensureVisible(find.text('Confirmar reserva'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar reserva'));
     await tester.pumpAndSettle();
 
@@ -101,6 +107,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('10:00 a 12:00'), findsWidgets);
 
+    // The confirmation button lives at the bottom of a ListView: on the
+    // default 800x600 test viewport it falls below the fold, so it has to be
+    // scrolled into view before tapping it.
+    await tester.ensureVisible(find.text('Confirmar reserva'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar reserva'));
     await tester.pumpAndSettle();
 
@@ -123,6 +134,11 @@ void main() {
 
     await tester.pumpWidget(app.wrap(bookingScreen()));
     await tester.pumpAndSettle();
+    // The confirmation button lives at the bottom of a ListView: on the
+    // default 800x600 test viewport it falls below the fold, so it has to be
+    // scrolled into view before tapping it.
+    await tester.ensureVisible(find.text('Confirmar reserva'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar reserva'));
     await tester.pumpAndSettle();
 
@@ -141,6 +157,11 @@ void main() {
     });
 
     await tester.pumpWidget(app.wrap(bookingScreen()));
+    await tester.pumpAndSettle();
+    // The confirmation button lives at the bottom of a ListView: on the
+    // default 800x600 test viewport it falls below the fold, so it has to be
+    // scrolled into view before tapping it.
+    await tester.ensureVisible(find.text('Confirmar reserva'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar reserva'));
     await tester.pumpAndSettle();
