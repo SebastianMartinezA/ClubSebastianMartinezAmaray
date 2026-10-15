@@ -16,6 +16,8 @@ verificacion/ Evidencia de las pruebas: salidas reales de curl y prueba de concu
 
 - **Backend** → [`backend/README.md`](backend/README.md) · Swagger en `/docs` · esquema en `/openapi.json`
 - **App** → [`app/README.md`](app/README.md)
+- **Diseño** (paleta medida del prototipo de Figma, componentes y tipografía) → [`docs/design-system.md`](docs/design-system.md)
+- **Guía de defensa** (arquitectura, decisiones y guion de la demo) → [`docs/guia-defensa.md`](docs/guia-defensa.md)
 - **Modelo de datos** (entidades, atributos y relaciones) → [`backend/docs/modelo-datos.md`](backend/docs/modelo-datos.md)
 - **Endpoints** con ejemplos → [`backend/docs/api.md`](backend/docs/api.md)
 - **Evidencia de verificación** (salidas reales de `curl` y de la prueba de concurrencia) →
