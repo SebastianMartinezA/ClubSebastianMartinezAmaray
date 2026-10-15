@@ -73,11 +73,12 @@ class SportStyle {
 /// that is too small, so the scale below is the same hierarchy with legible
 /// sizes, and every step is strictly larger than the one below it:
 ///
-///   display 30 · headlines 23-26 · titles 20-21 · body 15-16 · labels 12-14
+///   display 30 · headlines 23-26 · titles 16-21 · body 15-16 · labels 12-14
 ///
-/// `titleMedium` (20) is deliberately *above* `bodyLarge` (16), so a section
-/// title never comes out smaller than the paragraph under it. The choice is
-/// deliberate and easy to defend: same design, readable text.
+/// `titleMedium` (18, card and section titles) is deliberately *above*
+/// `bodyLarge` (16), so a title never comes out smaller than the paragraph
+/// under it. The choice is deliberate and easy to defend: same design,
+/// readable text.
 class AppTheme {
   AppTheme._();
 
@@ -151,21 +152,26 @@ class AppTheme {
         height: 1.2,
         color: AppColors.textPrimary,
       ),
-      // Section title ("EDITAR SEDE" in the prototype): lime, tracked, and
-      // deliberately above `bodyLarge` so it never reads smaller than the text
-      // under it.
+      // Card and section title (the venue name on a card, "Mis datos"): white,
+      // 18 dp. The prototype measured 16-17 dp; 18 keeps the hierarchy above
+      // `bodyLarge` (16) without the jump to 20, and the tracking of the
+      // prototype's section labels is *not* applied here because widgets reuse
+      // this role for card titles.
       titleMedium: TextStyle(
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: FontWeight.w700,
         height: 1.25,
+        letterSpacing: 0.3,
+        color: AppColors.textPrimary,
+      ),
+      // Uppercase section label of the prototype ("EDITAR SEDE"): lime and
+      // tracked, one accent per screen.
+      titleSmall: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        height: 1.2,
         letterSpacing: 1.2,
         color: AppColors.lime,
-      ),
-      titleSmall: TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w700,
-        height: 1.2,
-        color: AppColors.textPrimary,
       ),
       bodyLarge: TextStyle(
         fontSize: 16,

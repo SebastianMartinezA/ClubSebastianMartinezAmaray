@@ -218,3 +218,24 @@ def test_el_primer_turno_ofrecido_es_reservable(client, db, auth_headers, future
         },
     )
     assert response.status_code == 201, response.text
+
+
+# --------------------------------------------------------------------------- #
+# A5 (segunda parte) — un espacio de una sede inactiva tampoco se consulta
+# --------------------------------------------------------------------------- #
+def test_espacio_de_sede_inactiva_no_se_consulta(client, db, moron_venue, paddle_space):
+    """La fuga que encontró la verificación de la ronda 1: el filtro miraba el espacio
+    pero no su sede, así que un espacio activo de una sede inactiva seguía visible."""
+    moron_venue.is_active = False
+    db.commit()
+
+    listado = client.get("/spaces").json()
+    assert all(space["venue_id"] != moron_venue.id for space in listado), listado
+    assert client.get("/spaces", params={"venue_id": moron_venue.id}).json() == []
+
+    detalle = client.get(f"/spaces/{paddle_space.id}")
+    assert detalle.status_code == 404, detalle.text
+    assert detalle.json()["code"] == "space_not_found"
+
+    # Y la sede inactiva sigue dando 404 en su propio detalle (parte ya cubierta de A5).
+    assert client.get(f"/venues/{moron_venue.id}").status_code == 404

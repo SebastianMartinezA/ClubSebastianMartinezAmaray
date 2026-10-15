@@ -6,7 +6,7 @@ perfiles de usuarios. Es el backend de la app móvil en Flutter (esa parte la ha
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Pydantic v2
 - **Auth:** JWT propio, contraseñas con bcrypt (modo alternativo con Firebase Auth, apagado por defecto)
 - **Documentación:** Swagger UI en `/docs` y esquema OpenAPI en `/openapi.json`
-- **Tests:** 92 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
+- **Tests:** 107 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
 
 ---
 
@@ -98,7 +98,9 @@ docker exec tp-pg-test psql -U test -d postgres -c 'CREATE DATABASE club_verify'
 DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
 ```
 
-Resultado esperado: **107 passed**. Entre los tests están:
+Resultado esperado: **107 passed**. Uno de los tests de reservas se saltea si la suite corre antes de
+las 09:00 locales (depende de la hora por el horario de la sede), así que de madrugada puede dar
+`106 passed, 1 skipped`: es el mismo resultado. Entre los tests están:
 
 - las 14 reglas de negocio (duración, granularidad horaria, horario de la sede, futuro,
   solapamiento, cancelación que libera el horario, historial, correo no editable, etc.);

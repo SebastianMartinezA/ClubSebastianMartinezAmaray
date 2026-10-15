@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_navigator.dart';
 import '../models/reservation.dart';
 import '../models/user.dart';
 import '../services/reservation_service.dart';
@@ -9,7 +10,6 @@ import '../widgets/club_app_bar.dart';
 import '../widgets/future_view.dart';
 import '../widgets/reservation_card.dart';
 import 'history_screen.dart';
-import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'reservations_screen.dart';
 import 'venues_screen.dart';
@@ -60,10 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) {
       return;
     }
-    await Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (BuildContext _) => const LoginScreen()),
-      (Route<dynamic> route) => false,
-    );
+    // Mismo camino que la sesión vencida (navigatorKey global): así el logout manual
+    // y el 401 comparten la deduplicación y no se apilan dos pantallas de login.
+    goToLogin();
   }
 
   void _open(Widget screen) {

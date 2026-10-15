@@ -17,11 +17,12 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 /// Route that [goToLogin] pushed, and the navigator it was pushed on, kept so
 /// that several requests failing with a `401` at the same time push the login
 /// screen only once.
+///
+/// No re-entrancy flag is needed: `pushAndRemoveUntil` updates the navigator's
+/// history synchronously, so the second call already sees the login route as
+/// the current one.
 MaterialPageRoute<void>? _loginRoute;
 NavigatorState? _loginNavigator;
-
-/// True while [goToLogin] is running, to swallow re-entrant calls.
-bool _returningToLogin = false;
 
 /// Closes the session UI after a `401`: clears the whole navigation stack and
 /// shows the login screen.
@@ -30,15 +31,14 @@ bool _returningToLogin = false;
 /// rejects the token, so the user never stays on a protected screen with an
 /// empty profile.
 ///
-/// It is a no-op when there is no navigator yet, when another call is already
-/// doing it, or when the login screen is already on top. `pushAndRemoveUntil`
-/// blows away the whole stack, so a dialog that happened to be open when the
-/// token expired is closed too: the login is never left *behind* a dialog and
-/// the user cannot go "back" to a screen that needs a session that no longer
-/// exists.
+/// It is a no-op when there is no navigator yet or when the login screen is
+/// already on top. `pushAndRemoveUntil` blows away the whole stack, so a dialog
+/// that happened to be open when the token expired is closed too: the login is
+/// never left *behind* a dialog and the user cannot go "back" to a screen that
+/// needs a session that no longer exists.
 void goToLogin() {
   final NavigatorState? navigator = appNavigatorKey.currentState;
-  if (navigator == null || _returningToLogin) {
+  if (navigator == null) {
     return;
   }
   if (identical(_loginNavigator, navigator) &&
@@ -46,15 +46,13 @@ void goToLogin() {
       _loginRoute!.isCurrent) {
     // The login screen is already showing on this navigator: do not stack
     // another one on top (two or more requests can fail with `401` at almost
-    // the same time).
+    // the same time, and the manual logout goes through here as well).
     return;
   }
-  _returningToLogin = true;
   final MaterialPageRoute<void> loginRoute = MaterialPageRoute<void>(
     builder: (BuildContext _) => const LoginScreen(),
   );
   _loginRoute = loginRoute;
   _loginNavigator = navigator;
   navigator.pushAndRemoveUntil(loginRoute, (Route<dynamic> route) => false);
-  _returningToLogin = false;
 }

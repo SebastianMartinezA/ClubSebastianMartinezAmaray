@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_navigator.dart';
 import '../models/api_error.dart';
 import '../models/user.dart';
 import '../state/session.dart';
@@ -11,7 +12,6 @@ import '../widgets/club_app_bar.dart';
 import '../widgets/error_banner.dart';
 import '../widgets/info_row.dart';
 import '../widgets/primary_button.dart';
-import 'login_screen.dart';
 
 /// Pantalla 11: perfil.
 ///
@@ -154,10 +154,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) {
       return;
     }
-    await Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (BuildContext _) => const LoginScreen()),
-      (Route<dynamic> route) => false,
-    );
+    // Mismo camino que la sesión vencida (navigatorKey global): así el logout manual
+    // y el 401 comparten la deduplicación y no se apilan dos pantallas de login.
+    goToLogin();
   }
 
   @override

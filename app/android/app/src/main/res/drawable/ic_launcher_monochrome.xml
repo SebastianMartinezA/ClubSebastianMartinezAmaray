@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome layer of the adaptive launcher icon (Android 13+ "themed icons").
+     The system tints this drawable, so it must be a single colour with the shape
+     in the alpha channel: a filled disc with the pentagon punched out (evenOdd).
+     It cannot reuse `ic_launcher_foreground`, which has two colours: on themed
+     icons the pentagon would be painted over and the ball would come out as a
+     plain tinted circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M28,54 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 Z M54.00,40.00 L67.31,49.67 L62.23,65.33 L45.77,65.33 L40.69,49.67 Z" />
+</vector>

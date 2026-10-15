@@ -53,7 +53,7 @@ la API por HTTP en desarrollo. Para producción conviene HTTPS y quitar esa últ
 
 ```bash
 flutter analyze             # resultado esperado: 0 problemas (ver la nota de abajo)
-flutter test                # 17 archivos de tests
+flutter test                # 16 archivos de tests (más el helper de pruebas)
 flutter run                 # con el backend levantado
 ```
 
@@ -61,7 +61,7 @@ Los tests cubren modelos, servicios (con un cliente HTTP simulado), utilidades, 
 cuatro pantallas. Se escribieron pero **no se pudieron ejecutar** en el servidor donde se armó el
 proyecto, porque no hay SDK de Flutter para Linux ARM64: la primera corrida de `flutter test` es tuya.
 Lo mismo con `flutter analyze` sobre la capa de interfaz: en ese servidor solo se verificó la sintaxis
-de los 44 archivos `.dart` y el tipado completo de la capa que no es de interfaz (modelos, servicios,
+de los 45 archivos `.dart` y el tipado completo de la capa que no es de interfaz (modelos, servicios,
 estado y utilidades), con los paquetes reales. **`flutter analyze` con 0 problemas es el resultado
 esperado, no algo comprobado**: en el servidor donde se armó el proyecto no se pudo correr, así que
 esa verificación queda pendiente hasta que lo ejecutes en una máquina con el SDK de Flutter.
@@ -106,7 +106,7 @@ lib/
   widgets/    13 widgets compartidos (tarjetas, chips, grilla de turnos, estados de carga y error)
   theme/      app_theme.dart: paleta y tema material 3, dark
   utils/      formateo de fechas y horas, validadores de formularios
-test/         17 archivos: modelos, servicios, utilidades, estado y pantallas
+test/         16 archivos de tests (más el helper): modelos, servicios, utilidades, estado y pantallas
 android/      proyecto Android escrito a mano (manifest, gradle, MainActivity, íconos)
 tool/         generate_icons.py: el script con el que se generó el ícono
 docs/         icon-preview.png

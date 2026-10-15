@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..errors import NotFoundError
-from ..models import SportSpace
+from ..models import SportSpace, Venue
 from ..schemas import SportSpaceOut
 
 router = APIRouter(prefix="/spaces", tags=["Espacios deportivos"])
@@ -44,7 +44,14 @@ def list_spaces(
     venue_id: int | None = Query(default=None, description="Filtrar por sede"),
     db: Session = Depends(get_db),
 ) -> list[SportSpaceOut]:
-    stmt = select(SportSpace).where(SportSpace.is_active.is_(True)).options(joinedload(SportSpace.venue))
+    # Un espacio inactivo no existe para el usuario, y tampoco si su sede está inactiva:
+    # list_spaces filtra las dos cosas, así que este detalle tiene que coincidir.
+    stmt = (
+        select(SportSpace)
+        .join(SportSpace.venue)
+        .where(SportSpace.is_active.is_(True), Venue.is_active.is_(True))
+        .options(joinedload(SportSpace.venue))
+    )
     if venue_id is not None:
         stmt = stmt.where(SportSpace.venue_id == venue_id)
     spaces = db.execute(stmt.order_by(SportSpace.venue_id, SportSpace.space_type, SportSpace.number)).scalars().all()
@@ -57,7 +64,8 @@ def list_spaces(
 @router.get("/{space_id}", response_model=SportSpaceOut, summary="Detalle de un espacio deportivo")
 def get_space(space_id: int, db: Session = Depends(get_db)) -> SportSpaceOut:
     space = db.get(SportSpace, space_id)
-    # Un espacio inactivo no existe para el usuario: 404, igual que list_spaces (filtra is_active).
-    if space is None or not space.is_active:
+    # Un espacio inactivo no existe para el usuario, y tampoco si su sede está inactiva: 404,
+    # igual que list_spaces (que filtra is_active en las dos tablas).
+    if space is None or not space.is_active or space.venue is None or not space.venue.is_active:
         raise NotFoundError("El espacio deportivo no existe.", code="space_not_found")
     return _to_out(space)
