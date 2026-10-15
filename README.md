@@ -11,20 +11,13 @@ El repositorio se llama como pide la consigna: `Club` + nombre y apellido del al
 ```
 backend/      API REST (Python 3.11 + FastAPI + PostgreSQL + SQLAlchemy 2.0) con Swagger/OpenAPI
 app/          Aplicación móvil en Flutter, conectada a la API
-verificacion/ Evidencia de las pruebas: salidas reales de curl y prueba de concurrencia
 ```
 
 - **Backend** → [`backend/README.md`](backend/README.md) · Swagger en `/docs` · esquema en `/openapi.json`
 - **App** → [`app/README.md`](app/README.md)
 - **Diseño** (paleta medida del prototipo de Figma, componentes y tipografía) → [`docs/design-system.md`](docs/design-system.md)
-- **Guía de defensa** (arquitectura, decisiones y guion de la demo) → [`docs/guia-defensa.md`](docs/guia-defensa.md)
 - **Modelo de datos** (entidades, atributos y relaciones) → [`backend/docs/modelo-datos.md`](backend/docs/modelo-datos.md)
 - **Endpoints** con ejemplos → [`backend/docs/api.md`](backend/docs/api.md)
-- **Evidencia de verificación** (salidas reales de `curl` y de la prueba de concurrencia) →
-  [`verificacion/`](verificacion/)
-- **Verificación contra la API desplegada** (26 casos, incluida la reserva simultánea y el aislamiento
-  entre usuarios) → [`verificacion/e2e-nube.txt`](verificacion/e2e-nube.txt), se reproduce con
-  `python3 verificacion/e2e-nube.py`
 
 ## Cómo se corre
 
@@ -61,8 +54,9 @@ la API desplegada, se cambia el valor de `API_BASE_URL`.
 ## Tests
 
 ```bash
-# Backend: 92 tests (reglas de negocio, errores, concurrencia y zona horaria)
+# Backend: 108 tests (reglas de negocio, validaciones de perfil, errores, concurrencia y zona horaria)
 cd backend && DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
+# 107 pasan; 1 se saltea según la hora a la que se corra (reserva de un horario ya pasado del día)
 
 # App
 cd app && flutter test

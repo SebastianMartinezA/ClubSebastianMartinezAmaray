@@ -1,6 +1,6 @@
-"""Tests de la ronda 1 de arreglos del backend (PARTE A del brief).
+"""Pruebas de regresión del backend.
 
-Cada test corresponde a un hallazgo de la verificación adversarial:
+Cada caso fija un comportamiento que se corrigió y que no debe volver a romperse:
     A1 cancelación con timestamp en UTC,
     A2 el perfil no acepta nombres en blanco,
     A3 birth_date no acepta fechas futuras y se puede limpiar,
@@ -18,7 +18,7 @@ from app.models import SportSpace, User, Venue
 
 
 # --------------------------------------------------------------------------- #
-# A1 — cancelled_at en UTC con zona horaria
+# cancelled_at en UTC con zona horaria
 # --------------------------------------------------------------------------- #
 def test_cancelacion_guarda_cancelled_at_en_utc(client, auth_headers, paddle_space, future_date):
     dia = future_date(2)
@@ -50,7 +50,7 @@ def test_cancelacion_guarda_cancelled_at_en_utc(client, auth_headers, paddle_spa
 
 
 # --------------------------------------------------------------------------- #
-# A2 — PATCH /users/me rechaza nombres en blanco
+# PATCH /users/me rechaza nombres en blanco
 # --------------------------------------------------------------------------- #
 def test_patch_nombre_en_blanco_da_400(client, auth_headers):
     for blanco in ("   ", "  \t "):
@@ -72,7 +72,7 @@ def test_patch_apellido_en_blanco_da_400(client, auth_headers):
 
 
 # --------------------------------------------------------------------------- #
-# A3 — birth_date: sin fechas futuras y se puede limpiar
+# birth_date: sin fechas futuras y se puede limpiar
 # --------------------------------------------------------------------------- #
 def test_patch_birth_date_futura_da_400(client, auth_headers):
     response = client.patch("/users/me", headers=auth_headers, json={"birth_date": "2999-01-01"})
@@ -106,7 +106,7 @@ def test_patch_sin_birth_date_no_la_borra(client, auth_headers):
 
 
 # --------------------------------------------------------------------------- #
-# A4 — el login de un inactivo no filtra la existencia de la cuenta
+# el login de un inactivo no filtra la existencia de la cuenta
 # --------------------------------------------------------------------------- #
 def test_login_de_usuario_inactivo_no_filtra(client, db, demo_credentials):
     user = db.execute(select(User).where(User.email == demo_credentials["email"])).scalar_one()
@@ -122,7 +122,7 @@ def test_login_de_usuario_inactivo_no_filtra(client, db, demo_credentials):
 
 
 # --------------------------------------------------------------------------- #
-# A5 — recursos inactivos no se consultan por detalle ni disponibilidad
+# recursos inactivos no se consultan por detalle ni disponibilidad
 # --------------------------------------------------------------------------- #
 def test_sede_inactiva_no_se_consulta(client, db, moron_venue, future_date):
     moron_venue.is_active = False
@@ -146,7 +146,7 @@ def test_espacio_inactivo_no_se_consulta(client, db, paddle_space):
 
 
 # --------------------------------------------------------------------------- #
-# A6 — el filtro por tipo ignora acentos y mayúsculas
+# el filtro por tipo ignora acentos y mayúsculas
 # --------------------------------------------------------------------------- #
 def test_filtro_por_tipo_ignora_acentos_y_mayusculas(client):
     sin_acento = client.get("/spaces", params={"type": "Futbol"}).json()
@@ -167,7 +167,7 @@ def test_filtro_por_tipo_no_rompe_los_valores_de_la_app(client):
 
 
 # --------------------------------------------------------------------------- #
-# A7 — la disponibilidad no ofrece turnos imposibles de reservar
+# la disponibilidad no ofrece turnos imposibles de reservar
 # --------------------------------------------------------------------------- #
 def _sede_con_apertura_media(db, hh: int, mm: int) -> tuple[Venue, SportSpace]:
     venue = Venue(
@@ -221,11 +221,11 @@ def test_el_primer_turno_ofrecido_es_reservable(client, db, auth_headers, future
 
 
 # --------------------------------------------------------------------------- #
-# A5 (segunda parte) — un espacio de una sede inactiva tampoco se consulta
+# un espacio de una sede inactiva tampoco se consulta
 # --------------------------------------------------------------------------- #
 def test_espacio_de_sede_inactiva_no_se_consulta(client, db, moron_venue, paddle_space):
-    """La fuga que encontró la verificación de la ronda 1: el filtro miraba el espacio
-    pero no su sede, así que un espacio activo de una sede inactiva seguía visible."""
+    """Un espacio activo de una sede inactiva no se ofrece: el filtro tiene que mirar
+    la sede además del espacio."""
     moron_venue.is_active = False
     db.commit()
 

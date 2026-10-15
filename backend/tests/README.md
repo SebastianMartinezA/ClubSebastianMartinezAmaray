@@ -43,4 +43,4 @@ Sin `DATABASE_URL`, el `conftest` usa por defecto `club_test` en `localhost:5543
 | `test_timezone.py` | la validación de reserva futura usa la hora local de la sede |
 | `test_errors.py` | formato uniforme de errores |
 | `test_config.py` | settings por variables de entorno |
-| `test_bugfixes_ronda1.py` | arreglos de la ronda 1 (timestamps UTC, perfil, inactivos, acentos, grilla) |
+| `test_regresiones.py` | comportamiento ya corregido que no debe volver a romperse (timestamp de cancelación, perfil, recursos inactivos, acentos, grilla) |

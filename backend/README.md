@@ -108,7 +108,7 @@ de las 09:00 locales (depende de la hora por el horario de la sede), así que de
   dos pedidos concurrentes sobre el mismo horario y verifican que sólo uno se cree (el otro recibe 409);
 - el reloj de la sede (`tests/test_timezone.py`): con el servidor en UTC (como en Render), una reserva de
   las 22:00 en Argentina tiene que seguir siendo válida. Sin esto, el backend la rechazaba como pasada.
-- los arreglos de la ronda 1 de la revisión adversarial (`tests/test_bugfixes_ronda1.py`):
+- las pruebas de regresión (`tests/test_regresiones.py`):
   `cancelled_at` en UTC, perfil sin nombres en blanco ni fechas futuras, login de cuenta inactiva sin
   filtrar, recursos inactivos con 404, filtro por tipo sin acentos y disponibilidad reservable.
 
