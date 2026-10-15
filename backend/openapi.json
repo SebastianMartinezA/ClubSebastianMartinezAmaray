@@ -865,6 +865,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
           }
         }
       }

@@ -12,6 +12,8 @@ erDiagram
     USERS ||--o{ RESERVATIONS : "crea"
     VENUES ||--o{ SPORT_SPACES : "contiene"
     SPORT_SPACES ||--o{ RESERVATIONS : "se reserva"
+    RESERVATIONS ||--o{ NOTIFICATION_LOGS : "genera avisos"
+    DEVICE_TOKENS ||--o{ NOTIFICATION_LOGS : "recibe"
 
     USERS {
         int id PK
@@ -73,6 +75,13 @@ erDiagram
         datetime created_at
         datetime cancelled_at "NULL salvo cancelada"
     }
+
+    NOTIFICATION_LOGS {
+        int id PK
+        int reservation_id FK
+        int device_token_id FK
+        datetime sent_at "cuándo se envió el aviso"
+    }
 ```
 
 ## Entidades y decisiones
@@ -122,6 +131,13 @@ Reserva de un espacio para una fecha y un rango horario. `status` es `active` o 
 | 6 | sin solapamiento: `start < otro_end and end > otro_start` contra reservas **activas** |
 | 7 | validación + insert **atómicos** (`SELECT … FOR UPDATE` sobre la fila del espacio) |
 | 8 | cancelar pasa a `cancelled` y libera el horario |
+
+### `notification_logs`
+Registro de cada aviso push ya enviado: `reservation_id`, `device_token_id` y `sent_at`. El job de
+reservas próximas (`app/services/notifications.py`) escribe una fila por cada aviso que manda, y el
+par (**reserva, dispositivo**) tiene una `UNIQUE`: si el job vuelve a correr dentro de la misma
+franja horaria, el aviso ya registrado se saltea en lugar de repetirse en el teléfono. Se borra en
+cascada con la reserva o con el token del dispositivo.
 
 ### Integridad y concurrencia
 

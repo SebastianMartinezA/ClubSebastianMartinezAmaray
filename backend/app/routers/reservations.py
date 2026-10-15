@@ -79,7 +79,7 @@ def history(
 @router.post(
     "/{reservation_id}/cancel",
     response_model=ReservationOut,
-    responses=documented_errors(400, 401, 404),
+    responses=documented_errors(400, 401, 404, 409),
     summary="Cancelar una reserva",
 )
 def cancel(

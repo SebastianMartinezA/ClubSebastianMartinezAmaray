@@ -247,7 +247,7 @@ backend/
     main.py            # app FastAPI, CORS, handlers globales, routers
     config.py          # settings por variables de entorno
     database.py        # engine, SessionLocal, get_db, Base
-    models.py          # User, PasswordResetToken, DeviceToken, Venue, SportSpace, Reservation
+    models.py          # User, PasswordResetToken, DeviceToken, Venue, SportSpace, Reservation, NotificationLog
     schemas.py         # Pydantic v2 (request/response)
     security.py        # bcrypt, JWT, get_current_user, modo Firebase
     errors.py          # excepciones de dominio + handlers

@@ -180,6 +180,11 @@ def test_el_openapi_documenta_los_errores_que_la_api_devuelve(client):
     disponibilidad = schema["paths"]["/venues/{venue_id}/availability"]["get"]["responses"]
     assert {"400", "404"} <= set(disponibilidad)
 
+    # El camino hermano: cancelar dos veces devuelve 409 (`reservation_already_cancelled`) y esa
+    # respuesta tiene que estar declarada, igual que en la creación.
+    cancelar = schema["paths"]["/reservations/{reservation_id}/cancel"]["post"]["responses"]
+    assert {"400", "401", "404", "409"} <= set(cancelar)
+
 
 def test_health_verifica_la_base(client):
     response = client.get("/health")
