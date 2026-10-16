@@ -345,10 +345,9 @@ ThemeData listo para copiar, coherente con lo medido. Está pensado para **Mater
 `cardTheme`, existe desde 3.27). Los colores marcados `// estimado`
 o `// propuesto` son los que no pude determinar con certeza: revisalos antes de darlos por definitivos.
 
-> **Verificación:** extraje el bloque de `AppTheme` y lo pasé por `dart format`
-> con el SDK de Dart 3.13.5 (arm64): **parsea sin errores**.
-> No hay Flutter SDK instalado en este host, así que **no pude compilarlo** ni verificar los
-> tipos del framework.
+> **Verificación:** el bloque de `AppTheme` se pasó por `dart format` con el SDK de Dart 3.13.5 y
+> **parsea sin errores**. Después se compiló y se ejecutó en la app real (Flutter 3.47.5 con JDK 17):
+> `flutter analyze` no reporta nada, los 126 tests pasan y la app corrió contra la API publicada.
 >
 > **Notas de compatibilidad** (el `pubspec.yaml` de la app pide `flutter: ">=3.27.0"`):
 > - `CardThemeData` (en `cardTheme:`) es el tipo nuevo. En Flutter < 3.27 se llamaba `CardTheme`;
