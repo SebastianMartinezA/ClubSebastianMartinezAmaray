@@ -100,24 +100,26 @@ escritorio (antes hay que agregar el target con `flutter create --platforms=linu
 interfaz y el camino HTTP sin dispositivo. La carpeta `linux/` que genera ese comando no se versiona,
 porque la entrega es una app móvil.
 
-## 4. Activar las notificaciones push (opcional)
+## 4. Notificaciones push (activadas)
 
-Vienen apagadas a propósito: `PushService.isEnabled` devuelve `false` y las dependencias de Firebase
-están comentadas en `pubspec.yaml`, para que el proyecto compile sin depender de una cuenta externa.
-El job que arma y envía el aviso ya existe del lado del backend (`POST /devices` registra el token);
-lo que falta para cerrar el circuito es esta mitad.
+El circuito está cerrado y probado de punta a punta: la app está registrada en el proyecto Firebase
+`club-smartinez-amaray`, registra su token al iniciar sesión contra `POST /devices`, el backend firma
+con la cuenta de servicio y envía por FCM HTTP v1, y el teléfono recibe el aviso.
 
-1. En `pubspec.yaml`, descomentá `firebase_core` y `firebase_messaging`.
-2. En la consola de Firebase, registrá la app Android con el package
-   `ar.unimoron.club_sebastian_martinez_amaray` y bajá `google-services.json` a `android/app/`.
-3. En `android/app/build.gradle.kts`, aplicá el plugin de Google Services.
-4. En `lib/services/push_service.dart`, cambiá `isEnabled` para que devuelva `true`.
+- `app/android/app/google-services.json` está versionado: es configuración pública del cliente
+  (project id, app id y API key restringida por package), no una credencial.
+- La clave privada de la cuenta de servicio (`firebase-adminsdk-...json`) **no** va al repo: vive en
+  la variable `FCM_SERVICE_ACCOUNT_JSON` del backend.
+- `PushService` recibe `enabled: true` desde `main.dart` cuando Firebase inicializa; en tests queda
+  apagado y nunca toca el SDK.
+- Si Firebase no inicializa (por ejemplo en el build de escritorio Linux), la app arranca igual y el
+  push queda desactivado.
+- El token se refresca solo: `onTokenRefresh` vuelve a llamar a `POST /devices`.
 
-Con eso la app registra el token del dispositivo contra `POST /devices` al iniciar sesión, y el job de
-reservas próximas del backend le manda el aviso.
-
-Mientras esos cuatro pasos no estén hechos, el circuito completo (reservar y ver el push en el
-teléfono) no está probado: el backend puede enviar, pero no hay cliente que reciba.
+Para probar el envío sin esperar a que haya una reserva próxima: `GET /devices` con el usuario demo
+devuelve el token del teléfono, y con ese token se puede mandar un mensaje de prueba a
+`https://fcm.googleapis.com/v1/projects/club-smartinez-amaray/messages:send` usando la cuenta de
+servicio.
 
 ## 5. Qué no se versiona
 

@@ -78,13 +78,12 @@ de eso tarda alrededor de un minuto.
 - **Autenticación con JWT propio** (contraseñas con bcrypt): no depende de cuentas externas y se puede
   mostrar funcionando en la defensa. El backend tiene además un modo opcional con ID tokens de Firebase
   Auth, apagado por defecto (`AUTH_PROVIDER=firebase`).
-- **Notificaciones push**: la API registra los tokens de dispositivo y tiene el job que detecta las
-  reservas próximas (ventana de una hora, comparada como fecha y hora, y sin repetir un aviso ya
-  enviado). El envío por FCM está implementado del lado del backend y se activa al cargar las
-  credenciales (`FCM_SERVICE_ACCOUNT_JSON`); sin ellas, el job registra la intención y no falla.
-  Del lado de la app el cliente de `firebase_messaging` está escrito pero **desactivado** a
-  propósito: sin un proyecto de Firebase habilitado no hay `google-services.json` para compilar.
-  Cerrar ese circuito (proyecto de Firebase + credenciales) queda pendiente.
+- **Notificaciones push**: circuito completo y probado con un envío real al teléfono. La app
+  (`firebase_core` + `firebase_messaging`, proyecto `club-smartinez-amaray`) registra su token en
+  `POST /devices` al iniciar sesión y lo refresca solo; el backend firma con la cuenta de servicio
+  (`FCM_SERVICE_ACCOUNT_JSON`) y envía por FCM HTTP v1. El job detecta las reservas próximas (ventana
+  de una hora, comparada como fecha y hora, y sin repetir un aviso ya enviado) y, si la credencial no
+  está cargada, registra la intención sin fallar.
 - **Disponibilidad de reservas**: la validación y la inserción son atómicas (bloqueo de la fila del
   espacio), así que dos pedidos simultáneos del mismo horario no pueden crear dos reservas.
 - **Zona horaria**: las reservas son horas de pared de la sede. El backend usa `TIMEZONE`

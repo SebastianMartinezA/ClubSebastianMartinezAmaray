@@ -207,10 +207,10 @@ ventana cruza la medianoche entraría cualquier reserva del día siguiente), y c
 en `notification_logs`: si el job vuelve a correr dentro de la misma franja, no repite el envío.
 **Si `FCM_SERVICE_ACCOUNT_JSON` no está configurado, no falla**: registra el envío en el log y sigue.
 
-El envío real por FCM está implementado del lado del backend (HTTP v1, sin SDK); para que el aviso
-llegue al teléfono falta el lado del cliente: la app tiene la integración de `firebase_messaging`
-escrita pero desactivada, porque no hay proyecto de Firebase habilitado todavía. Los pasos para
-activarla están en [`../app/README.md`](../app/README.md#4-activar-las-notificaciones-push-opcional).
+El envío real por FCM está implementado del lado del backend (HTTP v1, sin SDK) y la app ya tiene la
+integración de `firebase_messaging` activa: el circuito completo se probó con un envío real a un
+teléfono Android. Los detalles de la configuración están en
+[`../app/README.md`](../app/README.md#4-notificaciones-push-activadas).
 
 ## 9. Recuperación de contraseña
 
