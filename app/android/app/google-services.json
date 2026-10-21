@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "784840267639",
+    "project_id": "club-smartinez-amaray",
+    "storage_bucket": "club-smartinez-amaray.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:784840267639:android:f68f1a3f5b325256187372",
+        "android_client_info": {
+          "package_name": "ar.unimoron.club_sebastian_martinez_amaray"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXowOofs62UzNZ6oBNLR-hJvVNHcfDV7I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

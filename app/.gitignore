@@ -43,6 +43,11 @@ migrate_working_dir/
 **/android/key.properties
 *.jks
 
-# Firebase (the owner adds these locally; never commit credentials)
-**/google-services.json
+# Firebase: el `google-services.json` de Android SÍ se commitea, porque es
+# configuración pública del cliente (project id, app id y API key restringida
+# por package) y el proyecto tiene que compilar sin pasos manuales. Lo que nunca
+# se commitea es la clave de la cuenta de servicio, que va sólo en el backend.
 **/GoogleService-Info.plist
+*firebase-adminsdk*.json
+*-service-account*.json
+

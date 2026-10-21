@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -16,8 +18,29 @@ import 'services/session_storage.dart';
 import 'state/session.dart';
 import 'theme/app_theme.dart';
 
+/// Runs when a data message arrives with the app in the background or closed.
+/// FCM shows `notification` payloads by itself; this keeps the isolate alive so
+/// the message is not dropped.
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('[push] mensaje en segundo plano: ${message.messageId}');
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase is initialised from `android/app/google-services.json`. If it is
+  // missing the app still starts: push stays disabled and everything else works
+  // (that is what the Linux desktop build does).
+  bool pushEnabled = false;
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    pushEnabled = true;
+  } catch (error) {
+    debugPrint('[push] Firebase no inicializó, push desactivado: $error');
+  }
 
   // Manual dependency injection: one instance of each service, created once
   // (simple enough to explain in the oral defence, no code generation).
@@ -27,7 +50,8 @@ Future<void> main() async {
   final CatalogService catalog = CatalogService(api);
   final ReservationService reservations = ReservationService(api);
   final DeviceService devices = DeviceService(api);
-  final PushService push = PushService(deviceService: devices);
+  final PushService push =
+      PushService(deviceService: devices, enabled: pushEnabled);
   final Session session = Session(api: api, auth: auth, push: push);
 
   // The free tier of Render sleeps the service after 15 minutes without

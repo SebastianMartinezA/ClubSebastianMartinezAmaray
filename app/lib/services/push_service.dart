@@ -1,53 +1,75 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import 'device_service.dart';
 
-/// Push notifications hook.
+/// Push notifications hook (Firebase Cloud Messaging).
 ///
-/// Firebase Cloud Messaging is deliberately **not** a dependency of this
-/// project: the assignment is graded without a Firebase project and the app has
-/// to build and run out of the box. This class is the single place where the
-/// integration is wired, so enabling notifications is a matter of following the
-/// steps of the README and uncommenting the block below.
+/// The app is registered in the Firebase project `club-smartinez-amaray`
+/// (`app/android/app/google-services.json`), so `main.dart` initialises
+/// Firebase and builds this service with `enabled: true`. Tests build it with
+/// the default (`false`) and never touch the Firebase SDK.
 ///
-/// Where the token has to be sent: `POST /devices`
-/// (`{"token": "...", "platform": "android"}`), after every login and after
-/// every token refresh.
+/// Where the token goes: `POST /devices`
+/// (`{"token": "...", "platform": "android"}`), after every login/registration
+/// and again on every token refresh.
 class PushService {
-  PushService({required DeviceService deviceService}) : _devices = deviceService;
+  PushService({
+    required DeviceService deviceService,
+    bool enabled = false,
+  })  : _devices = deviceService,
+        _enabled = enabled;
 
   final DeviceService _devices;
+  final bool _enabled;
 
-  /// Flips to `true` once `firebase_core` / `firebase_messaging` are added.
-  bool get isEnabled => false;
+  bool _listeningRefresh = false;
+
+  /// `true` only when Firebase was initialised successfully at startup.
+  bool get isEnabled => _enabled;
 
   /// Platform name stored by the backend (`android`, `ios`...).
   String get platform => _platformName();
 
   /// Called after a successful login/registration.
   ///
-  /// With Firebase disabled it does nothing; see the commented implementation
-  /// for the exact code to enable.
+  /// Returns `true` when a token was obtained and registered. Any Firebase or
+  /// network failure returns `false`: a push token is never a reason to break
+  /// the login flow.
   Future<bool> syncTokenAfterLogin() async {
-    if (!isEnabled) {
+    if (!_enabled) {
       return false;
     }
 
-    // ---------------------------------------------------------------------
-    // Enabled implementation (requires firebase_core + firebase_messaging):
-    //
-    // await FirebaseMessaging.instance.requestPermission();
-    // final String? token = await FirebaseMessaging.instance.getToken();
-    // if (token != null && token.isNotEmpty) {
-    //   await _devices.register(token: token, platform: platform);
-    //   // Keep the token fresh once the app is running:
-    //   FirebaseMessaging.instance.onTokenRefresh.listen(
-    //     (String fresh) => _devices.register(token: fresh, platform: platform),
-    //   );
-    //   return true;
-    // }
-    // ---------------------------------------------------------------------
-    return false;
+    try {
+      final FirebaseMessaging messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+      final String? token = await messaging.getToken();
+      if (token == null || token.isEmpty) {
+        return false;
+      }
+      await _devices.register(token: token, platform: platform);
+      _listenToTokenRefresh(messaging);
+      return true;
+    } catch (error) {
+      debugPrint('[push] no se pudo registrar el token: $error');
+      return false;
+    }
+  }
+
+  /// Keeps the token fresh once the app is running: FCM can rotate it.
+  void _listenToTokenRefresh(FirebaseMessaging messaging) {
+    if (_listeningRefresh) {
+      return;
+    }
+    _listeningRefresh = true;
+    messaging.onTokenRefresh.listen((String fresh) async {
+      try {
+        await _devices.register(token: fresh, platform: platform);
+      } catch (error) {
+        debugPrint('[push] no se pudo actualizar el token: $error');
+      }
+    });
   }
 
   /// Manual registration, useful to test the `POST /devices` endpoint with a
