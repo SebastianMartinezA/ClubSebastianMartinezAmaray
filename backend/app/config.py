@@ -36,14 +36,21 @@ class Settings(BaseSettings):
     firebase_project_id: str = ""
     firebase_jwks_url: str = ""
 
-    # SMTP para el correo de recuperación de contraseña.
-    # Si está vacío, el token se registra en el log (y en la respuesta solo con DEBUG=true).
+    # SMTP para el correo de recuperación de contraseña (sirve en local: el plan gratuito de
+    # Render bloquea los puertos SMTP 25/465/587, así que en producción no funciona).
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = "no-reply@club.local"
     smtp_use_tls: bool = True
+
+    # Correo por API HTTPS (Resend): es el transporte que sí funciona desplegado en Render free.
+    # Si RESEND_API_KEY está cargada, tiene prioridad sobre SMTP.
+    resend_api_key: str = ""
+    # Remitente que ve el destinatario. En Resend sin dominio propio es onboarding@resend.dev y
+    # solo entrega al correo de la cuenta; con un dominio verificado se usa el del dominio.
+    mail_from: str = ""
 
     # Firebase Cloud Messaging (HTTP v1). Si está vacío, el job solo loguea.
     fcm_service_account_json: str = ""
@@ -74,7 +81,21 @@ class Settings(BaseSettings):
 
     @property
     def smtp_configured(self) -> bool:
-        return bool(self.smtp_host and self.smtp_from)
+        return bool(self.smtp_host and self.mail_sender)
+
+    @property
+    def mail_sender(self) -> str:
+        """Remitente del correo saliente: MAIL_FROM si está, si no el SMTP_FROM histórico."""
+        return self.mail_from or self.smtp_from
+
+    @property
+    def mail_transport(self) -> str:
+        """Transporte del correo de recuperación: 'resend' (HTTPS), 'smtp' o 'none'."""
+        if self.resend_api_key.strip():
+            return "resend"
+        if self.smtp_configured:
+            return "smtp"
+        return "none"
 
     @property
     def fcm_configured(self) -> bool:

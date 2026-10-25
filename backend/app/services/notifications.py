@@ -155,25 +155,28 @@ def notify_upcoming_reservations(db: Session, window_minutes: int = DEFAULT_WIND
     return summary
 
 
-def send_password_reset_email(email: str, token: str, expires_minutes: int) -> bool:
-    """Manda el correo de recuperación si SMTP está configurado. Devuelve False si no lo está."""
-    settings = get_settings()
-    if not settings.smtp_configured:
-        return False
+_RESEND_ENDPOINT = "https://api.resend.com/emails"
+_RESET_SUBJECT = "Recuperación de contraseña - ClubSebastianMartinezAmaray"
 
-    import smtplib
-    from email.message import EmailMessage
 
-    message = EmailMessage()
-    message["Subject"] = "Recuperación de contraseña - ClubSebastianMartinezAmaray"
-    message["From"] = settings.smtp_from
-    message["To"] = email
-    message.set_content(
+def _reset_body(token: str, expires_minutes: int) -> str:
+    return (
         "Pediste restablecer tu contraseña.\n\n"
         f"Usá este token en POST /auth/reset-password (vence en {expires_minutes} minutos):\n\n"
         f"{token}\n\n"
         "Si no fuiste vos, ignorá este mensaje."
     )
+
+
+def _send_reset_via_smtp(settings, email: str, body: str) -> bool:
+    import smtplib
+    from email.message import EmailMessage
+
+    message = EmailMessage()
+    message["Subject"] = _RESET_SUBJECT
+    message["From"] = settings.mail_sender
+    message["To"] = email
+    message.set_content(body)
     try:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
             if settings.smtp_use_tls:
@@ -183,8 +186,66 @@ def send_password_reset_email(email: str, token: str, expires_minutes: int) -> b
             server.send_message(message)
         return True
     except Exception:
-        logger.exception("No se pudo enviar el correo de recuperación a %s", email)
+        logger.exception("No se pudo enviar el correo de recuperación a %s por SMTP", email)
         return False
+
+
+def _send_reset_via_resend(settings, email: str, body: str) -> bool:
+    """Manda el correo por la API HTTPS de Resend.
+
+    Existe porque el plan gratuito de Render bloquea el tráfico saliente a los puertos SMTP
+    25/465/587: con SMTP el correo nunca sale en producción, por más que las credenciales estén
+    bien. La API va por HTTPS (443) y no tiene ese problema.
+    """
+    try:
+        response = requests.post(
+            _RESEND_ENDPOINT,
+            json={
+                "from": settings.mail_sender,
+                "to": [email],
+                "subject": _RESET_SUBJECT,
+                "text": body,
+            },
+            headers={
+                "Authorization": f"Bearer {settings.resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=15,
+        )
+    except requests.RequestException:
+        logger.exception("No se pudo enviar el correo de recuperación a %s por Resend", email)
+        return False
+    if response.status_code >= 300:
+        logger.warning(
+            "Resend rechazó el envío a %s (%s): %s",
+            email,
+            response.status_code,
+            response.text[:300],
+        )
+        return False
+    return True
+
+
+def send_password_reset_email(email: str, token: str, expires_minutes: int) -> bool:
+    """Manda el correo de recuperación por el transporte configurado.
+
+    El transporte lo decide `settings.mail_transport`: `resend` si hay `RESEND_API_KEY` (API HTTPS,
+    la única opción que funciona en el plan gratuito de Render), `smtp` si hay `SMTP_HOST`, y `none`
+    si no hay nada configurado (devuelve False y el token queda solo en el log).
+    """
+    settings = get_settings()
+    transport = settings.mail_transport
+    if transport == "none":
+        return False
+
+    body = _reset_body(token, expires_minutes)
+    if transport == "resend":
+        handled = _send_reset_via_resend(settings, email, body)
+    else:
+        handled = _send_reset_via_smtp(settings, email, body)
+    if handled:
+        logger.info("Correo de recuperación enviado a %s por %s", email, transport)
+    return handled
 
 
 def run_notifications_job() -> dict[str, int]:

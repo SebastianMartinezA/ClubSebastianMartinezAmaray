@@ -59,6 +59,16 @@ services:
       # de Firebase (sync: false = se completa a mano en el panel de Render).
       - key: FCM_SERVICE_ACCOUNT_JSON
         sync: false
+      # Correo de recuperación de contraseña. En el plan gratuito de Render el tráfico saliente a
+      # los puertos SMTP (25/465/587) está bloqueado, así que el SMTP no sirve desplegado: se usa
+      # la API HTTPS de Resend. Con RESEND_API_KEY cargada, el correo sale por ahí.
+      - key: RESEND_API_KEY
+        sync: false
+      # Remitente verificado en Resend. Sin dominio propio: onboarding@resend.dev (solo entrega
+      # al correo de la cuenta de Resend).
+      - key: MAIL_FROM
+        sync: false
+      # SMTP queda como alternativa para correr el backend fuera de Render (local o VPS).
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

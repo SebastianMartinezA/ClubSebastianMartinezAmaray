@@ -35,10 +35,15 @@ async def lifespan(_: FastAPI):
 
     # Avisos que no se pueden demostrar sin configuración: se avisa al arrancar y no se falla,
     # porque el resto de la API funciona igual.
-    if not settings.smtp_configured:
+    if settings.mail_transport == "none":
         logger.warning(
-            "SMTP sin configurar: POST /auth/forgot-password no va a enviar el correo de "
-            "recuperación (el token queda solo en el log)."
+            "Correo saliente sin configurar (ni RESEND_API_KEY ni SMTP_HOST): "
+            "POST /auth/forgot-password no envía el correo y el token queda solo en el log. "
+            "En el plan gratuito de Render el SMTP no sale: hace falta la API HTTPS."
+        )
+    else:
+        logger.info(
+            "Correo de recuperación por %s desde %s", settings.mail_transport, settings.mail_sender
         )
     if not settings.fcm_configured:
         logger.warning(
@@ -173,11 +178,13 @@ def health(response: Response) -> dict[str, object]:
             "status": "degraded",
             "database": "unreachable",
             "environment": settings.environment,
+            "mail_transport": settings.mail_transport,
             "notifications": notifications,
         }
     return {
         "status": "ok",
         "database": "ok",
         "environment": settings.environment,
+        "mail_transport": settings.mail_transport,
         "notifications": notifications,
     }

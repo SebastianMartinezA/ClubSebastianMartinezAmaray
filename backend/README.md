@@ -232,10 +232,27 @@ teléfono Android. Los detalles de la configuración están en
 1. `POST /auth/forgot-password` con el correo. Siempre responde lo mismo, exista o no el usuario.
 2. Se genera un token aleatorio de un solo uso, con vencimiento (30 min por defecto). En la base se
    guarda **solo el hash SHA-256**, nunca el token.
-3. Si `SMTP_*` está configurado, el token sale por correo. Si no, queda en el log y —solo con
-   `DEBUG=true`— también en el campo `reset_token` de la respuesta.
+3. Si hay un transporte de correo configurado, el token sale por correo. Si no, queda en el log y
+   —solo con `DEBUG=true`— también en el campo `reset_token` de la respuesta.
+   El transporte se elige solo, en este orden: `RESEND_API_KEY` (API HTTPS) → `SMTP_HOST` (SMTP) →
+   nada. `/health` muestra cuál está activo en `mail_transport`.
 4. `POST /auth/reset-password` con `token` y `new_password` cambia la contraseña e invalida el token.
    Un segundo intento con el mismo token devuelve 400 `reset_token_used`.
+
+### Por qué Resend y no SMTP en producción
+
+**El plan gratuito de Render bloquea el tráfico saliente a los puertos SMTP 25, 465 y 587.** Con
+SMTP el correo no sale aunque las credenciales estén perfectas, y el error se ve recién en el log del
+servicio. Para el despliegue se usa la API HTTPS de Resend, que va por el 443:
+
+1. Crear una cuenta gratis en <https://resend.com> (100 correos por día).
+2. Copiar la API key y cargarla en Render como `RESEND_API_KEY` (marcada como secreta).
+3. Cargar `MAIL_FROM`. Sin dominio propio es `onboarding@resend.dev`, y en ese caso Resend solo
+   entrega al correo con el que se creó la cuenta: alcanza para demostrar el circuito con la propia
+   cuenta. Con un dominio verificado se usa el del dominio y entrega a cualquier destinatario.
+4. Verificar en `GET /health` que `mail_transport` diga `resend`, y después probar el flujo real.
+   `POST /auth/forgot-password` siempre responde 200 con un mensaje genérico; lo que confirma el
+   envío es el correo en la bandeja (y el log `Correo de recuperación enviado a ... por resend`).
 
 ## 10. Errores
 
