@@ -195,17 +195,32 @@ FIREBASE_PROJECT_ID=mi-proyecto-firebase
 ## 8. Notificaciones push
 
 - `POST /devices` registra el token FCM del dispositivo del usuario autenticado.
-- El job de reservas próximas se corre con:
+- **El job de reservas próximas corre solo**: la API levanta un loop interno (`app/services/scheduler.py`)
+  que lo ejecuta cada `NOTIFICATIONS_SCHEDULER_INTERVAL_SECONDS` (60 s por defecto) ni bien arranca.
+  No hay que disparar nada a mano y no agrega dependencias nuevas (usa `asyncio`).
+- Su estado se ve en vivo en `GET /health`, campo `notifications`: `enabled`, `running`, `runs`,
+  `last_run_at`, `last_result` (cuántas reservas entraron en la ventana, cuántos envíos se intentaron,
+  cuántos salieron y cuántos se saltearon por ya avisados) y `last_error`.
+- Para correrlo a mano (o para un cron externo) sigue disponible:
 
 ```bash
 python -m app.services.notifications
 ```
 
+- Para apagarlo: `NOTIFICATIONS_SCHEDULER_ENABLED=false`.
+
 Detecta las reservas activas que arrancan dentro de la próxima hora y les manda el push a los
 dispositivos del dueño. La ventana se compara como fecha **y** hora completas (si no, cuando la
 ventana cruza la medianoche entraría cualquier reserva del día siguiente), y cada aviso se registra
-en `notification_logs`: si el job vuelve a correr dentro de la misma franja, no repite el envío.
-**Si `FCM_SERVICE_ACCOUNT_JSON` no está configurado, no falla**: registra el envío en el log y sigue.
+en `notification_logs`: si el job vuelve a correr dentro de la misma franja, no repite el envío (eso
+también cubre que dos instancias corran el job a la vez).
+**Si `FCM_SERVICE_ACCOUNT_JSON` no está configurado, no falla**: registra el envío en el log y sigue
+(el arranque deja un warning explícito).
+
+Límites que conviene saber para la defensa: en el plan gratuito de Render el servicio duerme a los
+15 minutos sin tráfico, así que mientras está dormido el scheduler no corre (el primer request lo
+despierta y el job arranca de nuevo); y conviene un solo worker de `uvicorn`, porque con
+`--workers N` cada worker levantaría su propio loop.
 
 El envío real por FCM está implementado del lado del backend (HTTP v1, sin SDK) y la app ya tiene la
 integración de `firebase_messaging` activa: el circuito completo se probó con un envío real a un

@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     # Firebase Cloud Messaging (HTTP v1). Si está vacío, el job solo loguea.
     fcm_service_account_json: str = ""
 
+    # Job de avisos push: corre solo, adentro del proceso de la API (app/services/scheduler.py).
+    # Se puede apagar para correrlo a mano con `python -m app.services.notifications`.
+    notifications_scheduler_enabled: bool = True
+    notifications_scheduler_interval_seconds: int = 60
+
     # CORS: lista separada por comas, o "*"
     cors_origins: str = "*"
 

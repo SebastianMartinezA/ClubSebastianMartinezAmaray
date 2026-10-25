@@ -45,18 +45,20 @@ demo) se cargan con `SEED_ON_STARTUP=true`.
 cd app
 flutter create .              # completa las carpetas nativas que faltan (no toca lib/ ni test/)
 flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+flutter run                   # por defecto, contra la API desplegada en Render
 ```
 
-`10.0.2.2` es la forma de llegar a la máquina anfitriona desde el emulador de Android. Para apuntar a
-la API desplegada, se cambia el valor de `API_BASE_URL`.
+Sin `--dart-define`, la app apunta a `https://clubsebastianmartinezamaray-api.onrender.com`, así que
+la demo funciona sin acordarse de ninguna bandera. Para un backend local se pasa el valor a mano:
+`--dart-define=API_BASE_URL=http://10.0.2.2:8000` (`10.0.2.2` es la forma de llegar a la máquina
+anfitriona desde el emulador de Android).
 
 ## Tests
 
 ```bash
-# Backend: 116 tests (reglas de negocio, validaciones de perfil, errores, concurrencia y zona horaria)
+# Backend: 120 tests (reglas de negocio, validaciones de perfil, errores, concurrencia, scheduler y zona horaria)
 cd backend && DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
-# 115 pasan; 1 se saltea según la hora a la que se corra (reserva de un horario ya pasado del día)
+# en la última corrida pasaron los 120; uno de ellos depende de la hora a la que se corra
 
 # App
 cd app && flutter test
@@ -81,9 +83,10 @@ de eso tarda alrededor de un minuto.
 - **Notificaciones push**: circuito completo y probado con un envío real al teléfono. La app
   (`firebase_core` + `firebase_messaging`, proyecto `club-smartinez-amaray`) registra su token en
   `POST /devices` al iniciar sesión y lo refresca solo; el backend firma con la cuenta de servicio
-  (`FCM_SERVICE_ACCOUNT_JSON`) y envía por FCM HTTP v1. El job detecta las reservas próximas (ventana
-  de una hora, comparada como fecha y hora, y sin repetir un aviso ya enviado) y, si la credencial no
-  está cargada, registra la intención sin fallar.
+  (`FCM_SERVICE_ACCOUNT_JSON`) y envía por FCM HTTP v1. El job que detecta las reservas próximas
+  (ventana de una hora, comparada como fecha y hora, y sin repetir un aviso ya enviado) **corre solo**:
+  un loop interno de la API lo ejecuta cada 60 s, y su estado se ve en `/health` (`runs`,
+  `last_run_at`, `last_result`). Si la credencial de FCM no está cargada, registra la intención sin fallar.
 - **Disponibilidad de reservas**: la validación y la inserción son atómicas (bloqueo de la fila del
   espacio), así que dos pedidos simultáneos del mismo horario no pueden crear dos reservas.
 - **Zona horaria**: las reservas son horas de pared de la sede. El backend usa `TIMEZONE`

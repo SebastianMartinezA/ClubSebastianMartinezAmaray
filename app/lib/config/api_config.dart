@@ -7,16 +7,23 @@
 /// flutter run --dart-define=API_BASE_URL=http://192.168.0.10:8000
 /// ```
 ///
-/// Default value is the magic address the Android emulator uses to reach the
-/// host machine, so `uvicorn` running on the development machine works out of
-/// the box.
+/// Default value is the API already deployed on Render, so a plain `flutter run`
+/// (or `flutter build apk` + install) talks to the cloud backend and the demo
+/// works without remembering any flag. For a local backend, override it:
+///
+/// ```bash
+/// flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+/// ```
+///
+/// `10.0.2.2` is the magic address the Android emulator uses to reach the host
+/// machine.
 class ApiConfig {
   ApiConfig._();
 
   /// Base URL of the API, without a trailing slash.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000',
+    defaultValue: 'https://clubsebastianmartinezamaray-api.onrender.com',
   );
 
   /// Timeout applied to every HTTP request.

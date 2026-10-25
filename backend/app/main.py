@@ -3,6 +3,7 @@
 Swagger/OpenAPI queda disponible en /docs y el esquema en /openapi.json.
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -16,6 +17,7 @@ from .database import Base, engine
 from .errors import register_exception_handlers
 from .routers import auth, devices, reservations, spaces, users, venues
 from .seed import seed_demo_data
+from .services import scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,7 +32,35 @@ async def lifespan(_: FastAPI):
         logger.info("Esquema verificado/creado.")
     if settings.seed_on_startup:
         logger.info("Seed de datos de ejemplo: %s", seed_demo_data())
-    yield
+
+    # Avisos que no se pueden demostrar sin configuración: se avisa al arrancar y no se falla,
+    # porque el resto de la API funciona igual.
+    if not settings.smtp_configured:
+        logger.warning(
+            "SMTP sin configurar: POST /auth/forgot-password no va a enviar el correo de "
+            "recuperación (el token queda solo en el log)."
+        )
+    if not settings.fcm_configured:
+        logger.warning(
+            "FCM_SERVICE_ACCOUNT_JSON sin configurar: el job de avisos registra la intención "
+            "pero no manda el push."
+        )
+
+    stop_event = asyncio.Event()
+    scheduler_task = None
+    if settings.notifications_scheduler_enabled:
+        scheduler_task = await scheduler.start(
+            stop_event, settings.notifications_scheduler_interval_seconds
+        )
+    else:
+        logger.info(
+            "Scheduler de avisos desactivado (NOTIFICATIONS_SCHEDULER_ENABLED=false): "
+            "el job se corre a mano con `python -m app.services.notifications`."
+        )
+    try:
+        yield
+    finally:
+        await scheduler.stop(scheduler_task, stop_event)
 
 
 app = FastAPI(
@@ -122,13 +152,17 @@ def root() -> dict[str, str]:
 
 
 @app.get("/health", tags=["Estado"], summary="Healthcheck (servicio y base de datos)")
-def health(response: Response) -> dict[str, str]:
+def health(response: Response) -> dict[str, object]:
     """Verifica el servicio y la conexión con la base.
 
     Sirve para despertar el despliegue antes de una demo: en el plan gratuito de Render, la
     primera petición después de 15 minutos de inactividad tarda cerca de un minuto, y devolver
     "ok" sin tocar la base no probaría que el servicio quedó realmente operativo.
+
+    Incluye además el estado del scheduler de avisos push (`notifications`), para poder verificar
+    en vivo que el job está corriendo solo y cuándo fue su última corrida.
     """
+    notifications = scheduler.scheduler_snapshot()
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -139,5 +173,11 @@ def health(response: Response) -> dict[str, str]:
             "status": "degraded",
             "database": "unreachable",
             "environment": settings.environment,
+            "notifications": notifications,
         }
-    return {"status": "ok", "database": "ok", "environment": settings.environment}
+    return {
+        "status": "ok",
+        "database": "ok",
+        "environment": settings.environment,
+        "notifications": notifications,
+    }

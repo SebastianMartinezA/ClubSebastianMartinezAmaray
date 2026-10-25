@@ -53,8 +53,8 @@ una versión, el mensaje dice el mínimo exacto que pide: se cambia el número e
 La dirección de la API se inyecta al compilar, no está en el código:
 
 ```bash
-# Backend desplegado en la nube (el que se usa para la demo)
-flutter run --dart-define=API_BASE_URL=https://<tu-servicio>.onrender.com
+# Por defecto (sin banderas): la API desplegada en Render, que es la que se usa para la demo
+flutter run
 
 # Backend local en la misma computadora (emulador de Android)
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
@@ -63,9 +63,10 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 flutter run --dart-define=API_BASE_URL=http://192.168.0.10:8000
 ```
 
-Sin `--dart-define`, la app usa `http://10.0.2.2:8000`, que es la dirección con la que el emulador de
-Android ve a la computadora que lo hospeda. `10.0.2.2` es el alias del host; en un teléfono real hay
-que pasar la IP de la computadora.
+Sin `--dart-define`, la app apunta a `https://clubsebastianmartinezamaray-api.onrender.com`: la demo
+funciona sin acordarse de ninguna bandera. Para el backend local hay que pasar el valor a mano;
+`10.0.2.2` es la dirección con la que el emulador de Android ve a la computadora que lo hospeda, y en
+un teléfono real hay que pasar la IP de la computadora.
 
 El `AndroidManifest.xml` ya trae `INTERNET` y `usesCleartextTraffic="true"`, necesario para hablar con
 la API por HTTP en desarrollo. Para producción conviene HTTPS y quitar esa última opción.

@@ -12,6 +12,7 @@ os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("AUTH_PROVIDER", "local")
 os.environ.setdefault("AUTO_CREATE_TABLES", "true")
 os.environ.setdefault("SEED_ON_STARTUP", "false")
+os.environ.setdefault("NOTIFICATIONS_SCHEDULER_ENABLED", "false")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

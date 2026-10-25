@@ -49,6 +49,12 @@ services:
         value: production
       - key: CORS_ORIGINS
         value: "*"
+      # Job de avisos push: corre solo dentro del proceso de la API, cada 60 s.
+      # Se deja explícito para que se vea en el panel y se pueda apagar sin tocar el código.
+      - key: NOTIFICATIONS_SCHEDULER_ENABLED
+        value: "true"
+      - key: NOTIFICATIONS_SCHEDULER_INTERVAL_SECONDS
+        value: "60"
       # Para notificaciones push reales, cargar el JSON de la cuenta de servicio
       # de Firebase (sync: false = se completa a mano en el panel de Render).
       - key: FCM_SERVICE_ACCOUNT_JSON

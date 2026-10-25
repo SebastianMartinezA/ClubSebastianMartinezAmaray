@@ -187,10 +187,19 @@ def send_password_reset_email(email: str, token: str, expires_minutes: int) -> b
         return False
 
 
+def run_notifications_job() -> dict[str, int]:
+    """Corre el job con su propia sesión de base: es el punto de entrada del scheduler interno.
+
+    Abre y cierra la sesión acá porque el loop del scheduler vive fuera del ciclo request/response
+    de FastAPI (ver `app/services/scheduler.py`).
+    """
+    with SessionLocal() as db:
+        return notify_upcoming_reservations(db)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    with SessionLocal() as db:
-        print(notify_upcoming_reservations(db))
+    print(run_notifications_job())
 
 
 if __name__ == "__main__":
