@@ -179,6 +179,7 @@ def health(response: Response) -> dict[str, object]:
             "database": "unreachable",
             "environment": settings.environment,
             "mail_transport": settings.mail_transport,
+            "push_configured": settings.fcm_configured,
             "notifications": notifications,
         }
     return {
@@ -186,5 +187,6 @@ def health(response: Response) -> dict[str, object]:
         "database": "ok",
         "environment": settings.environment,
         "mail_transport": settings.mail_transport,
+        "push_configured": settings.fcm_configured,
         "notifications": notifications,
     }

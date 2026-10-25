@@ -200,7 +200,8 @@ FIREBASE_PROJECT_ID=mi-proyecto-firebase
   No hay que disparar nada a mano y no agrega dependencias nuevas (usa `asyncio`).
 - Su estado se ve en vivo en `GET /health`, campo `notifications`: `enabled`, `running`, `runs`,
   `last_run_at`, `last_result` (cuántas reservas entraron en la ventana, cuántos envíos se intentaron,
-  cuántos salieron y cuántos se saltearon por ya avisados) y `last_error`.
+  cuántos salieron y cuántos se saltearon por ya avisados) y `last_error`. El mismo `/health` trae
+  `push_configured`: si está en `false`, FCM no tiene credencial y el push no va a salir.
 - Para correrlo a mano (o para un cron externo) sigue disponible:
 
 ```bash

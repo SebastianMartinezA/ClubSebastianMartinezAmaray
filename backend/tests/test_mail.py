@@ -131,3 +131,4 @@ def test_health_informa_el_transporte_de_correo(client):
     respuesta = client.get("/health").json()
 
     assert respuesta["mail_transport"] in {"none", "smtp", "resend"}
+    assert respuesta["push_configured"] is False  # sin FCM en los tests
