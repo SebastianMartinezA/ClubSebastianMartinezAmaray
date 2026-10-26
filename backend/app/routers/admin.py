@@ -84,9 +84,15 @@ def _get_space(db: Session, space_id: int) -> SportSpace:
 
 
 def _assert_venue_name_free(db: Session, name: str, exclude_id: int | None = None) -> None:
-    """El nombre de sede es único. Se compara sin distinguir mayúsculas: 'Moron' y 'moron' son la
-    misma sede para cualquiera que la busque, así que crear la segunda sólo genera duplicados."""
-    stmt = select(Venue.id).where(func.lower(Venue.name) == name.lower())
+    """El nombre de sede es único entre las sedes activas. Se compara sin distinguir mayúsculas:
+    'Moron' y 'moron' son la misma sede para cualquiera que la busque, así que crear la segunda sólo
+    genera duplicados.
+
+    Las sedes dadas de baja no reservan el nombre: si la sede se cerró, el club tiene que poder
+    volver a crearla con el mismo nombre."""
+    stmt = select(Venue.id).where(
+        func.lower(Venue.name) == name.lower(), Venue.is_active.is_(True)
+    )
     if exclude_id is not None:
         stmt = stmt.where(Venue.id != exclude_id)
     if db.execute(stmt).first() is not None:
@@ -96,10 +102,13 @@ def _assert_venue_name_free(db: Session, name: str, exclude_id: int | None = Non
 def _assert_space_slot_free(
     db: Session, venue_id: int, space_type: str, number: int, exclude_id: int | None = None
 ) -> None:
+    """El slot (sede, tipo, número) es único entre los espacios activos: un espacio dado de baja no
+    bloquea volver a crear el mismo."""
     stmt = select(SportSpace.id).where(
         SportSpace.venue_id == venue_id,
         SportSpace.space_type == space_type,
         SportSpace.number == number,
+        SportSpace.is_active.is_(True),
     )
     if exclude_id is not None:
         stmt = stmt.where(SportSpace.id != exclude_id)

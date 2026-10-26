@@ -7,7 +7,7 @@ en este mismo repositorio.
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Pydantic v2
 - **Auth:** JWT propio, contraseñas con bcrypt (modo alternativo con Firebase Auth, apagado por defecto)
 - **Documentación:** Swagger UI en `/docs` y esquema OpenAPI en `/openapi.json`
-- **Tests:** 163 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
+- **Tests:** 170 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
 
 ---
 
@@ -99,7 +99,7 @@ docker exec tp-pg-test psql -U test -d postgres -c 'CREATE DATABASE club_verify'
 DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
 ```
 
-Resultado esperado: **163 tests**, todos en verde. Uno de ellos depende de la hora a la que se corra
+Resultado esperado: **170 tests**, todos en verde. Uno de ellos depende de la hora a la que se corra
 (por el horario de las sedes), así que antes de las 09:00 locales puede dar `162 passed, 1 skipped`:
 es el mismo resultado. Entre los tests están:
 
@@ -295,9 +295,16 @@ Decisiones que sostienen el módulo:
 - **Unicidad real, no de formulario.** El nombre de sede es único sin distinguir mayúsculas
   (`venue_already_exists`) y no puede haber dos espacios con la misma sede, tipo y número
   (`space_already_exists`), porque la base tiene esa restricción.
-- **La columna nueva se agrega sola.** El TP no usa Alembic: `Base.metadata.create_all` crea tablas
-  pero no agrega columnas a una tabla existente, así que `app/bootstrap.py` hace un `ALTER TABLE`
-  idempotente para `users.is_admin` cuando la base viene de una versión anterior.
+- **La unicidad es parcial: cuenta sólo lo activo.** El nombre de una sede dada de baja queda libre y
+  se puede volver a crear; lo mismo con el slot de un espacio. Se garantiza con un índice único
+  parcial (`uq_venue_active_name_lower`, `uq_space_active_slot`), no sólo con una validación en
+  Python, así que dos pedidos simultáneos tampoco pueden duplicar.
+- **Lo que `create_all` no puede cambiar se adapta al arrancar.** El TP no usa Alembic:
+  `Base.metadata.create_all` crea tablas pero no agrega columnas ni cambia restricciones de una tabla
+  que ya existe. Por eso `app/bootstrap.py` corre dos ajustes idempotentes al arrancar:
+  `ensure_admin_column` (agrega `users.is_admin` si falta) y `ensure_catalog_indexes` (reemplaza las
+  viejas restricciones únicas por los índices parciales). Ninguno de los dos rompe el arranque si
+  falla: deja un warning en el log y sigue.
 
 ## 11. Errores
 
@@ -331,9 +338,18 @@ backend/
     seed.py            # datos de ejemplo idempotentes
     routers/           # auth, users, venues, spaces, admin, reservations, devices
     services/          # reservations (reglas de negocio), notifications (push)
-  tests/               # 163 tests
+  tests/               # 170 tests
   docs/                # modelo-datos.md, api.md
+  scripts/             # export_openapi.py: regenera openapi.json
   requirements.txt  Dockerfile  render.yaml  .env.example  README.md  openapi.json
 ```
 
 Más detalle en [`docs/modelo-datos.md`](docs/modelo-datos.md) y [`docs/api.md`](docs/api.md).
+
+`openapi.json` se entrega en el repo, así que hay que regenerarlo cuando cambia un endpoint:
+
+```bash
+.venv/bin/python scripts/export_openapi.py   # 22 rutas, 29 operaciones
+```
+
+`tests/test_docs.py` falla si el archivo quedó viejo respecto de la app.

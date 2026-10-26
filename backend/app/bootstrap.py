@@ -35,6 +35,84 @@ def ensure_admin_column(engine: Engine) -> bool:
     return True
 
 
+def ensure_catalog_indexes(engine: Engine) -> bool:
+    """Adapta la unicidad del catálogo a la baja lógica en una base que ya existe.
+
+    Las tablas se crearon con `name UNIQUE` en sedes y espacios, y con un `UNIQUE (venue_id,
+    space_type, number)` que no mira `is_active`. Con esas restricciones, una sede dada de baja
+    bloqueaba para siempre su nombre. La regla pasa a ser: el nombre (o el slot) se reserva sólo
+    mientras está activo, y eso lo garantiza un índice único parcial.
+
+    `create_all` no toca restricciones de tablas existentes, así que el cambio se aplica acá.
+    Es idempotente: mira qué hay y sólo hace falta cuando falta. Devuelve True si cambió algo.
+    """
+    if engine.dialect.name != "postgresql":
+        # En SQLite las restricciones no se pueden quitar sin reconstruir la tabla. Una base
+        # SQLite creada con esta versión ya nace con los índices parciales correctos.
+        return False
+
+    inspector = inspect(engine)
+    tablas = set(inspector.get_table_names())
+    if not {"venues", "sport_spaces"} <= tablas:
+        return False
+
+    obsoletas = [
+        ("venues", "venues_name_key"),
+        ("sport_spaces", "sport_spaces_name_key"),
+        ("sport_spaces", "uq_space_per_venue_type_number"),
+    ]
+    faltantes = [
+        (
+            "venues",
+            "uq_venue_active_name_lower",
+            "ON venues (lower(name)) WHERE is_active",
+        ),
+        (
+            "sport_spaces",
+            "uq_space_active_slot",
+            "ON sport_spaces (venue_id, space_type, number) WHERE is_active",
+        ),
+    ]
+
+    existentes: dict[str, set[str]] = {}
+    for tabla in ("venues", "sport_spaces"):
+        nombres = {c["name"] for c in inspector.get_unique_constraints(tabla)}
+        nombres |= {i["name"] for i in inspector.get_indexes(tabla)}
+        existentes[tabla] = nombres
+
+    cambios = False
+    with engine.begin() as connection:
+        for tabla, restriccion in obsoletas:
+            if restriccion not in existentes[tabla]:
+                continue
+            try:
+                connection.execute(
+                    text(f"ALTER TABLE {tabla} DROP CONSTRAINT IF EXISTS {restriccion}")
+                )
+                cambios = True
+            except Exception as error:  # noqa: BLE001 - no se puede tumbar el arranque por esto
+                logger.warning("No se pudo quitar %s.%s: %s", tabla, restriccion, error)
+            # Si la unicidad venía como índice suelto y no como constraint, cae por acá.
+            try:
+                connection.execute(text(f"DROP INDEX IF EXISTS {restriccion}"))
+            except Exception:  # noqa: BLE001 - el índice pertenece a la constraint que ya se fue
+                pass
+        for tabla, indice, definicion in faltantes:
+            if indice in existentes[tabla]:
+                continue
+            try:
+                connection.execute(
+                    text(f"CREATE UNIQUE INDEX IF NOT EXISTS {indice} {definicion}")
+                )
+                cambios = True
+            except Exception as error:  # noqa: BLE001
+                logger.warning("No se pudo crear el índice %s: %s", indice, error)
+
+    if cambios:
+        logger.info("Esquema actualizado: unicidad del catálogo limitada a los registros activos.")
+    return cambios
+
+
 def promote_admin(db: Session, email: str) -> bool:
     """Marca como administrador al usuario con ese correo. Devuelve True si lo cambió.
 

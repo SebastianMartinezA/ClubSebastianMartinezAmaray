@@ -386,3 +386,61 @@ def test_el_espacio_movido_de_sede_cambia_de_nombre(
     assert response.status_code == 200, response.text
     assert response.json()["venue_id"] == castelar.id
     assert response.json()["name"] == "Castelar_Av._Yrigoyen_1234_Paddle_4"
+
+
+def test_se_puede_recrear_una_sede_dada_de_baja_con_el_mismo_nombre(client, admin_headers):
+    """La baja es lógica: la fila sigue en la base. Si esa fila bloqueara el nombre, el club no podría
+    reabrir una sede que cerró. El nombre se reserva sólo mientras la sede está activa."""
+    primera = _nueva_sede(client, admin_headers, nombre="Tigre")
+    assert primera.status_code == 201, primera.text
+    client.delete(f"/admin/venues/{primera.json()['id']}", headers=admin_headers)
+
+    segunda = _nueva_sede(client, admin_headers, nombre="Tigre")
+
+    assert segunda.status_code == 201, segunda.text
+    assert segunda.json()["id"] != primera.json()["id"]
+    assert segunda.json()["is_active"] is True
+    # la vieja sigue dada de baja y la vista pública muestra una sola Tigre
+    assert [venue["name"] for venue in client.get("/venues").json()].count("Tigre") == 1
+
+
+def test_la_sede_activa_sigue_bloqueando_el_nombre(client, admin_headers):
+    creada = _nueva_sede(client, admin_headers, nombre="Tigre")
+    assert creada.status_code == 201
+
+    repetida = _nueva_sede(client, admin_headers, nombre="TIGRE")
+
+    assert repetida.status_code == 409
+    assert repetida.json()["code"] == "venue_already_exists"
+
+
+def test_se_puede_recrear_un_espacio_dado_de_baja_en_el_mismo_slot(
+    client, admin_headers, paddle_space
+):
+    client.delete(f"/admin/spaces/{paddle_space.id}", headers=admin_headers)
+
+    response = client.post(
+        "/admin/spaces",
+        headers=admin_headers,
+        json={
+            "venue_id": paddle_space.venue_id,
+            "space_type": paddle_space.space_type,
+            "number": paddle_space.number,
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["id"] != paddle_space.id
+    assert response.json()["name"] == paddle_space.name
+
+
+def test_baja_de_una_sede_ya_inactiva_es_idempotente(client, admin_headers):
+    creada = _nueva_sede(client, admin_headers, nombre="Tigre")
+    vid = creada.json()["id"]
+
+    primera = client.delete(f"/admin/venues/{vid}", headers=admin_headers)
+    segunda = client.delete(f"/admin/venues/{vid}", headers=admin_headers)
+
+    assert primera.status_code == 200
+    assert segunda.status_code == 200
+    assert segunda.json()["is_active"] is False

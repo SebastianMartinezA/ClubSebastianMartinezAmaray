@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 
-from .bootstrap import ensure_admin_column, promote_admin
+from .bootstrap import ensure_admin_column, ensure_catalog_indexes, promote_admin
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .errors import register_exception_handlers
@@ -33,6 +33,8 @@ async def lifespan(_: FastAPI):
         # create_all no agrega columnas a tablas existentes: si la base de producción viene de una
         # versión anterior, `users.is_admin` se agrega acá.
         ensure_admin_column(engine)
+        # Tampoco toca restricciones: la unicidad del catálogo pasa a ser parcial (sólo activos).
+        ensure_catalog_indexes(engine)
         logger.info("Esquema verificado/creado.")
     if settings.seed_on_startup:
         logger.info("Seed de datos de ejemplo: %s", seed_demo_data())

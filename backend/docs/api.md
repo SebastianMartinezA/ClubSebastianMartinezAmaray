@@ -30,6 +30,16 @@ Todos los errores responden `{"detail": "...", "code": "..."}`.
 | POST | `/reservations/{id}/cancel` | ✅ | Cancelar (libera el horario) |
 | POST | `/devices` | ✅ | Registrar token de notificaciones |
 | GET | `/devices` | ✅ | Mis dispositivos registrados |
+| GET | `/admin/venues` | 🔑 | Listar sedes, incluidas las dadas de baja |
+| POST | `/admin/venues` | 🔑 | Crear sede |
+| PATCH | `/admin/venues/{id}` | 🔑 | Editar sede (o reactivarla) |
+| DELETE | `/admin/venues/{id}` | 🔑 | Dar de baja la sede (baja lógica) |
+| GET | `/admin/spaces` | 🔑 | Listar espacios, incluidas las bajas |
+| POST | `/admin/spaces` | 🔑 | Crear espacio en una sede |
+| PATCH | `/admin/spaces/{id}` | 🔑 | Editar espacio (o reactivarlo) |
+| DELETE | `/admin/spaces/{id}` | 🔑 | Dar de baja el espacio (baja lógica) |
+
+🔑 = además del token, el usuario necesita el perfil de administrador (`users.is_admin`).
 
 ---
 
@@ -223,6 +233,60 @@ estar disponible** y se puede reservar de nuevo.
 
 `201 Created` `{"id": 1, "token": "…", "platform": "android", "created_at": "…"}`.
 Es idempotente: registrar el mismo token otra vez lo reasigna al usuario actual.
+
+## Administración del catálogo
+
+El catálogo (sedes y espacios) no lo edita el socio: lo administra el club. Por eso vive bajo
+`/admin`, separado de las rutas públicas que usa la app.
+
+### Permisos
+
+El token JWT identifica al usuario; el permiso se resuelve **contra la base en cada request**
+(`users.is_admin`), no adentro del token. Si se le quita el permiso a alguien, deja de poder operar
+en el acto, sin esperar a que venza su token.
+
+- Sin token → `401 missing_token`
+- Usuario común → `403 admin_required`
+- El administrador se designa al arrancar con la variable `ADMIN_EMAIL` (no es secreta; va en
+  `render.yaml`).
+
+### Alta de sede
+
+```json
+{ "name": "Tigre", "address": "Av. Cazon 1200", "opening_time": "08:00", "closing_time": "22:00" }
+```
+
+`201 Created` `{ "id": 3, "name": "Tigre", "address": "Av. Cazon 1200", "opening_time": "08:00:00",
+"closing_time": "22:00:00", "is_active": true, "spaces_count": 0 }`
+
+- El nombre es único entre las sedes **activas**, sin distinguir mayúsculas → `409
+  venue_already_exists`.
+- `opening_time` tiene que ser anterior a `closing_time` → `400 validation_error`.
+
+### Alta de espacio
+
+```json
+{ "venue_id": 3, "space_type": "Paddle", "number": 1 }
+```
+
+`201 Created` `{ "id": 6, "venue_id": 3, "space_type": "Paddle", "number": 1,
+"name": "Tigre_Av._Cazon_1200_Paddle_1", "is_active": true }`
+
+- El `name` se compone solo (sede + dirección + tipo + número) y se recalcula si después se edita
+  la sede, el tipo o el número: nunca queda desincronizado.
+- El slot (sede, tipo, número) es único entre los espacios activos → `409 space_already_exists`.
+
+### Baja y reactivación
+
+`DELETE` no borra: deja `is_active: false`. Las reservas históricas siguen apuntando a esa sede o
+espacio.
+
+- Si hay reservas activas de hoy en adelante: `409 venue_has_future_reservations` o `409
+  space_has_future_reservations`. Primero se cancelan, después se da de baja.
+- El socio deja de verla (`404` en las rutas públicas), el administrador la sigue viendo en
+  `/admin/*`.
+- `PATCH { "is_active": true }` la reactiva y vuelve al listado público.
+- Como el nombre se libera al dar de baja la sede, se puede volver a crear una sede con ese nombre.
 
 ## Errores transversales
 

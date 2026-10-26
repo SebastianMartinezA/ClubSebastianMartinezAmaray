@@ -5,6 +5,7 @@ arranque de producción sobre una base que ya existe. Se prueban sobre SQLite en
 para simular una base "vieja" (sin la columna `is_admin`) sin tocar la base de test compartida.
 """
 
+import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session
 
@@ -79,3 +80,24 @@ def test_sin_correo_configurado_no_hace_nada(tmp_path):
 
     with Session(engine) as session:
         assert promote_admin(session, "") is False
+
+
+def test_los_indices_parciales_del_catalogo_se_recrean_solos():
+    """Si la base viene sin los índices parciales (por ejemplo, creada por una versión anterior),
+    `ensure_catalog_indexes` los repone al arrancar y no hace nada la segunda vez."""
+    from sqlalchemy import inspect, text
+
+    from app.bootstrap import ensure_catalog_indexes
+    from app.database import engine
+
+    if engine.dialect.name != "postgresql":
+        pytest.skip("la adaptación de restricciones corre sólo en PostgreSQL")
+
+    with engine.begin() as connection:
+        connection.execute(text("DROP INDEX IF EXISTS uq_venue_active_name_lower"))
+
+    assert ensure_catalog_indexes(engine) is True
+    nombres = {index["name"] for index in inspect(engine).get_indexes("venues")}
+    assert "uq_venue_active_name_lower" in nombres
+    # idempotente: ya está todo, no cambia nada
+    assert ensure_catalog_indexes(engine) is False

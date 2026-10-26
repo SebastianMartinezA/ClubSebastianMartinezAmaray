@@ -12,10 +12,12 @@ from sqlalchemy import (
     DateTime,
     Enum as SAEnum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Time,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -109,10 +111,19 @@ class Venue(Base):
     __tablename__ = "venues"
     __table_args__ = (
         CheckConstraint("opening_time < closing_time", name="ck_venues_opening_before_closing"),
+        # El nombre queda reservado sólo mientras la sede está activa: un índice único *parcial*.
+        # Las sedes dadas de baja son historia y no tienen por qué bloquear reabrir el mismo nombre.
+        Index(
+            "uq_venue_active_name_lower",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text("is_active"),
+            sqlite_where=text("is_active"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
     address: Mapped[str] = mapped_column(String(200), nullable=False)
     opening_time: Mapped[time] = mapped_column(Time, nullable=False)
     closing_time: Mapped[time] = mapped_column(Time, nullable=False)
@@ -129,14 +140,24 @@ class SportSpace(Base):
 
     __tablename__ = "sport_spaces"
     __table_args__ = (
-        UniqueConstraint("venue_id", "space_type", "number", name="uq_space_per_venue_type_number"),
+        # Slot único (sede, tipo, número) sólo entre los espacios activos: el espacio dado de baja
+        # no bloquea volver a crear el mismo, y el nombre compuesto se puede repetir en la historia.
+        Index(
+            "uq_space_active_slot",
+            "venue_id",
+            "space_type",
+            "number",
+            unique=True,
+            postgresql_where=text("is_active"),
+            sqlite_where=text("is_active"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     venue_id: Mapped[int] = mapped_column(ForeignKey("venues.id", ondelete="CASCADE"), index=True, nullable=False)
     space_type: Mapped[str] = mapped_column(String(60), index=True, nullable=False)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
-    name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 

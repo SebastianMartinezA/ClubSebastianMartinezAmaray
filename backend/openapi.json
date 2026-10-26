@@ -648,6 +648,656 @@
         }
       }
     },
+    "/admin/venues": {
+      "get": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Listar todas las sedes, incluidas las dadas de baja",
+        "operationId": "list_venues_admin_admin_venues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VenueAdminOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Venues Admin Admin Venues Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Crear una sede",
+        "operationId": "create_venue_admin_venues_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VenueCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueAdminOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/admin/venues/{venue_id}": {
+      "patch": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Editar una sede (parcial)",
+        "operationId": "update_venue_admin_venues__venue_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Venue Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VenueUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueAdminOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Dar de baja una sede (baja lógica)",
+        "operationId": "deactivate_venue_admin_venues__venue_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Venue Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueAdminOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/spaces": {
+      "get": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Listar todos los espacios, incluidos los dados de baja",
+        "operationId": "list_spaces_admin_admin_spaces_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Venue Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SportSpaceAdminOut"
+                  },
+                  "title": "Response List Spaces Admin Admin Spaces Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Crear un espacio deportivo en una sede",
+        "operationId": "create_space_admin_spaces_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SportSpaceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportSpaceAdminOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/spaces/{space_id}": {
+      "patch": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Editar un espacio (parcial)",
+        "operationId": "update_space_admin_spaces__space_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Space Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SportSpaceUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportSpaceAdminOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Dar de baja un espacio (baja lógica)",
+        "operationId": "deactivate_space_admin_spaces__space_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Space Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportSpaceAdminOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso pedido no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reservations": {
       "get": {
         "tags": [
@@ -1004,7 +1654,7 @@
           "Estado"
         ],
         "summary": "Healthcheck (servicio y base de datos)",
-        "description": "Verifica el servicio y la conexión con la base.\n\nSirve para despertar el despliegue antes de una demo: en el plan gratuito de Render, la\nprimera petición después de 15 minutos de inactividad tarda cerca de un minuto, y devolver\n\"ok\" sin tocar la base no probaría que el servicio quedó realmente operativo.",
+        "description": "Verifica el servicio y la conexión con la base.\n\nSirve para despertar el despliegue antes de una demo: en el plan gratuito de Render, la\nprimera petición después de 15 minutos de inactividad tarda cerca de un minuto, y devolver\n\"ok\" sin tocar la base no probaría que el servicio quedó realmente operativo.\n\nIncluye además el estado del scheduler de avisos push (`notifications`), para poder verificar\nen vivo que el job está corriendo solo y cuándo fue su última corrida.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -1012,9 +1662,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
+                  "additionalProperties": true,
                   "type": "object",
                   "title": "Response Health Health Get"
                 }
@@ -1345,6 +1993,83 @@
         ],
         "title": "SpaceAvailability"
       },
+      "SportSpaceAdminOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "venue_id": {
+            "type": "integer",
+            "title": "Venue Id"
+          },
+          "venue_name": {
+            "type": "string",
+            "title": "Venue Name"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "space_type": {
+            "type": "string",
+            "title": "Space Type"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "venue_id",
+          "venue_name",
+          "name",
+          "space_type",
+          "number",
+          "is_active"
+        ],
+        "title": "SportSpaceAdminOut"
+      },
+      "SportSpaceCreate": {
+        "properties": {
+          "venue_id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Venue Id"
+          },
+          "space_type": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Space Type",
+            "examples": [
+              "Paddle"
+            ]
+          },
+          "number": {
+            "type": "integer",
+            "maximum": 999.0,
+            "minimum": 1.0,
+            "title": "Number",
+            "examples": [
+              3
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "venue_id",
+          "space_type",
+          "number"
+        ],
+        "title": "SportSpaceCreate"
+      },
       "SportSpaceOut": {
         "properties": {
           "id": {
@@ -1382,6 +2107,61 @@
           "number"
         ],
         "title": "SportSpaceOut"
+      },
+      "SportSpaceUpdate": {
+        "properties": {
+          "venue_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue Id"
+          },
+          "space_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Space Type"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 999.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "SportSpaceUpdate"
       },
       "TokenResponse": {
         "properties": {
@@ -1616,6 +2396,51 @@
         ],
         "title": "ValidationError"
       },
+      "VenueAdminOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "opening_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Opening Time"
+          },
+          "closing_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Closing Time"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "spaces_count": {
+            "type": "integer",
+            "title": "Spaces Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "address",
+          "opening_time",
+          "closing_time",
+          "is_active",
+          "spaces_count"
+        ],
+        "title": "VenueAdminOut"
+      },
       "VenueAvailability": {
         "properties": {
           "venue": {
@@ -1641,6 +2466,52 @@
           "spaces"
         ],
         "title": "VenueAvailability"
+      },
+      "VenueCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "Tigre"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Address",
+            "examples": [
+              "Av. Cazón 1200"
+            ]
+          },
+          "opening_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Opening Time",
+            "examples": [
+              "08:00"
+            ]
+          },
+          "closing_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Closing Time",
+            "examples": [
+              "22:00"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "address",
+          "opening_time",
+          "closing_time"
+        ],
+        "title": "VenueCreate"
       },
       "VenueOut": {
         "properties": {
@@ -1676,6 +2547,74 @@
           "closing_time"
         ],
         "title": "VenueOut"
+      },
+      "VenueUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "opening_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Time"
+          },
+          "closing_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Time"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "VenueUpdate",
+        "description": "Actualización parcial: sólo se tocan los campos enviados."
       }
     },
     "securitySchemes": {
