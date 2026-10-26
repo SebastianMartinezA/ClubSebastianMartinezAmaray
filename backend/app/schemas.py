@@ -3,7 +3,7 @@
 from datetime import date as date_type
 from datetime import datetime, time
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from .models import ReservationStatus
 
@@ -142,6 +142,81 @@ class SportSpaceOut(BaseModel):
     name: str
     space_type: str
     number: int
+
+
+# --------------------------------------------------------------------------- #
+# Administración del catálogo (sedes y espacios). Requiere perfil de administrador.
+# --------------------------------------------------------------------------- #
+def _strip_text(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("no puede estar vacío")
+    return value
+
+
+class VenueCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120, examples=["Tigre"])
+    address: str = Field(min_length=1, max_length=200, examples=["Av. Cazón 1200"])
+    opening_time: time = Field(examples=["08:00"])
+    closing_time: time = Field(examples=["22:00"])
+
+    @field_validator("name", "address")
+    @classmethod
+    def _clean_text(cls, value: str) -> str:
+        return _strip_text(value)
+
+    @model_validator(mode="after")
+    def _check_hours(self):
+        if self.opening_time >= self.closing_time:
+            raise ValueError("la hora de apertura debe ser anterior a la de cierre")
+        return self
+
+
+class VenueUpdate(BaseModel):
+    """Actualización parcial: sólo se tocan los campos enviados."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    address: str | None = Field(default=None, min_length=1, max_length=200)
+    opening_time: time | None = None
+    closing_time: time | None = None
+    is_active: bool | None = None
+
+    @field_validator("name", "address")
+    @classmethod
+    def _clean_text(cls, value: str | None) -> str | None:
+        return _strip_text(value) if value is not None else None
+
+
+class VenueAdminOut(VenueOut):
+    is_active: bool
+    spaces_count: int
+
+
+class SportSpaceCreate(BaseModel):
+    venue_id: int = Field(ge=1)
+    space_type: str = Field(min_length=1, max_length=60, examples=["Paddle"])
+    number: int = Field(ge=1, le=999, examples=[3])
+
+    @field_validator("space_type")
+    @classmethod
+    def _clean_type(cls, value: str) -> str:
+        return _strip_text(value)
+
+
+class SportSpaceUpdate(BaseModel):
+    venue_id: int | None = Field(default=None, ge=1)
+    space_type: str | None = Field(default=None, min_length=1, max_length=60)
+    number: int | None = Field(default=None, ge=1, le=999)
+    is_active: bool | None = None
+
+    @field_validator("space_type")
+    @classmethod
+    def _clean_type(cls, value: str | None) -> str | None:
+        return _strip_text(value) if value is not None else None
+
+
+class SportSpaceAdminOut(SportSpaceOut):
+    is_active: bool
 
 
 # --------------------------------------------------------------------------- #

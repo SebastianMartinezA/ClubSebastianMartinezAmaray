@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .database import get_db
-from .errors import UnauthorizedError
+from .errors import ForbiddenError, UnauthorizedError
 from .models import User
 
 settings = get_settings()
@@ -130,6 +130,20 @@ def get_current_user(
 
     if user is None or not user.is_active:
         raise UnauthorizedError("Usuario no encontrado o inactivo.", code="invalid_token")
+    return user
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Exige perfil de administrador (campo `is_admin` del usuario).
+
+    Se resuelve en cada request contra la base, no contra el token: quitarle el permiso a un
+    usuario tiene efecto inmediato, sin esperar a que venza su JWT.
+    """
+    if not user.is_admin:
+        raise ForbiddenError(
+            "Se requiere perfil de administrador para gestionar sedes y espacios.",
+            code="admin_required",
+        )
     return user
 
 

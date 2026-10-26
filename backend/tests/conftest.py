@@ -13,6 +13,7 @@ os.environ.setdefault("AUTH_PROVIDER", "local")
 os.environ.setdefault("AUTO_CREATE_TABLES", "true")
 os.environ.setdefault("SEED_ON_STARTUP", "false")
 os.environ.setdefault("NOTIFICATIONS_SCHEDULER_ENABLED", "false")
+os.environ.setdefault("ADMIN_EMAIL", "")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -21,7 +22,7 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import SportSpace, Venue  # noqa: E402
+from app.models import SportSpace, User, Venue  # noqa: E402
 from app.seed import DEMO_EMAIL, DEMO_PASSWORD, seed_demo_data  # noqa: E402
 
 
@@ -86,6 +87,17 @@ def demo_credentials() -> dict:
 
 @pytest.fixture
 def auth_headers(client: TestClient, demo_credentials: dict) -> dict:
+    response = client.post("/auth/login", json=demo_credentials)
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+@pytest.fixture
+def admin_headers(client: TestClient, db: Session, demo_credentials: dict) -> dict:
+    """Credenciales del usuario demo, pero con perfil de administrador."""
+    user = db.execute(select(User).where(User.email == demo_credentials["email"])).scalar_one()
+    user.is_admin = True
+    db.commit()
     response = client.post("/auth/login", json=demo_credentials)
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}

@@ -56,9 +56,9 @@ anfitriona desde el emulador de Android).
 ## Tests
 
 ```bash
-# Backend: 127 tests (reglas de negocio, validaciones de perfil, errores, concurrencia, scheduler y zona horaria)
+# Backend: 163 tests (reglas de negocio, validaciones de perfil, errores, concurrencia, CRUD de sedes y espacios, scheduler y zona horaria)
 cd backend && DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
-# en la última corrida pasaron los 127; uno de ellos depende de la hora a la que se corra
+# en la última corrida pasaron los 163; uno de ellos depende de la hora a la que se corra
 
 # App
 cd app && flutter test

@@ -55,6 +55,9 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     birth_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Administrador: es el único perfil que puede crear, editar y dar de baja sedes y espacios.
+    # Los usuarios comunes sólo consultan el catálogo.
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False

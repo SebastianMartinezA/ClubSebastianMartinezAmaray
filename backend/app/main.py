@@ -12,10 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 
+from .bootstrap import ensure_admin_column, promote_admin
 from .config import get_settings
-from .database import Base, engine
+from .database import Base, SessionLocal, engine
 from .errors import register_exception_handlers
-from .routers import auth, devices, reservations, spaces, users, venues
+from .routers import admin, auth, devices, reservations, spaces, users, venues
 from .seed import seed_demo_data
 from .services import scheduler
 
@@ -29,9 +30,20 @@ async def lifespan(_: FastAPI):
     # Migraciones simples: el esquema se crea al arrancar (equivalente a Alembic para este TP).
     if settings.auto_create_tables:
         Base.metadata.create_all(bind=engine)
+        # create_all no agrega columnas a tablas existentes: si la base de producción viene de una
+        # versión anterior, `users.is_admin` se agrega acá.
+        ensure_admin_column(engine)
         logger.info("Esquema verificado/creado.")
     if settings.seed_on_startup:
         logger.info("Seed de datos de ejemplo: %s", seed_demo_data())
+    if settings.admin_email:
+        with SessionLocal() as db:
+            promote_admin(db, settings.admin_email)
+    else:
+        logger.info(
+            "ADMIN_EMAIL sin configurar: nadie puede gestionar sedes y espacios "
+            "(el resto de la API funciona igual)."
+        )
 
     # Avisos que no se pueden demostrar sin configuración: se avisa al arrancar y no se falla,
     # porque el resto de la API funciona igual.
@@ -83,6 +95,13 @@ app = FastAPI(
         {"name": "Usuarios", "description": "Perfil del usuario autenticado."},
         {"name": "Sedes", "description": "Sedes, sus espacios y disponibilidad por fecha."},
         {"name": "Espacios deportivos", "description": "Listado y filtrado de espacios."},
+        {
+            "name": "Administración",
+            "description": (
+                "Alta, edición y baja de sedes y espacios deportivos. Requiere un usuario con "
+                "perfil de administrador (campo is_admin); con un usuario común devuelve 403."
+            ),
+        },
         {"name": "Reservas", "description": "Alta, listado, historial y cancelación de reservas."},
         {"name": "Dispositivos", "description": "Tokens de notificaciones push."},
     ],
@@ -102,6 +121,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(venues.router)
 app.include_router(spaces.router)
+app.include_router(admin.router)
 app.include_router(reservations.router)
 app.include_router(devices.router)
 

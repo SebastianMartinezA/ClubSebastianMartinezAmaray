@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     # CORS: lista separada por comas, o "*"
     cors_origins: str = "*"
 
+    # Correo del usuario que queda como administrador (CRUD de sedes y espacios). Si al arrancar
+    # existe un usuario con ese correo, se le marca is_admin=True; si no, se avisa por log.
+    # No es un secreto: es sólo un identificador, por eso vive versionado en render.yaml.
+    admin_email: str = ""
+
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:

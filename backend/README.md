@@ -7,7 +7,7 @@ en este mismo repositorio.
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Pydantic v2
 - **Auth:** JWT propio, contraseñas con bcrypt (modo alternativo con Firebase Auth, apagado por defecto)
 - **Documentación:** Swagger UI en `/docs` y esquema OpenAPI en `/openapi.json`
-- **Tests:** 116 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
+- **Tests:** 163 tests con `pytest`, incluida una prueba de concurrencia sobre el mismo horario
 
 ---
 
@@ -99,9 +99,9 @@ docker exec tp-pg-test psql -U test -d postgres -c 'CREATE DATABASE club_verify'
 DATABASE_URL=postgresql+psycopg2://test:test@localhost:55432/club_test .venv/bin/pytest -q
 ```
 
-Resultado esperado: **116 tests**, de los cuales **115 passed** y uno se saltea si la suite corre antes
-de las 09:00 locales (depende de la hora por el horario de la sede), así que de madrugada puede dar
-`115 passed, 1 skipped`: es el mismo resultado. Entre los tests están:
+Resultado esperado: **163 tests**, todos en verde. Uno de ellos depende de la hora a la que se corra
+(por el horario de las sedes), así que antes de las 09:00 locales puede dar `162 passed, 1 skipped`:
+es el mismo resultado. Entre los tests están:
 
 - las 14 reglas de negocio (duración, granularidad horaria, horario de la sede, futuro,
   solapamiento, cancelación que libera el horario, historial, correo no editable, etc.);
@@ -114,6 +114,11 @@ de las 09:00 locales (depende de la hora por el horario de la sede), así que de
   avisada no se vuelve a avisar al correr el job de nuevo;
 - el esquema OpenAPI (`tests/test_errors.py`): ninguna operación documenta un 422 que la API no
   devuelve, y las respuestas de error están declaradas con el mismo cuerpo que devuelve el handler.
+- el CRUD de sedes y espacios (`tests/test_admin_catalog.py`): permisos (401 sin token, 403 sin
+  perfil de administrador), alta con nombre compuesto automático, unicidad de sede y de
+  (sede, tipo, número), horarios invertidos, baja lógica y el 409 cuando hay reservas futuras.
+- el ajuste de esquema al arrancar (`tests/test_bootstrap.py`): agrega `users.is_admin` a una base
+  que ya existía, es idempotente y promueve al administrador sin fallar si el correo no existe.
 - las pruebas de regresión (`tests/test_regresiones.py`):
   `cancelled_at` en UTC, perfil sin nombres en blanco ni fechas futuras, login de cuenta inactiva sin
   filtrar, recursos inactivos con 404, filtro por tipo sin acentos y disponibilidad reservable.
@@ -255,7 +260,46 @@ servicio. Para el despliegue se usa la API HTTPS de Resend, que va por el 443:
    `POST /auth/forgot-password` siempre responde 200 con un mensaje genérico; lo que confirma el
    envío es el correo en la bandeja (y el log `Correo de recuperación enviado a ... por resend`).
 
-## 10. Errores
+## 10. Administración de sedes y espacios
+
+El catálogo se gestiona por API y requiere **perfil de administrador** (campo `users.is_admin`). El
+usuario común sólo consulta `/venues` y `/spaces`; no puede crear ni modificar nada.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/admin/venues` | Lista todas las sedes, incluidas las dadas de baja |
+| `POST` | `/admin/venues` | Crea una sede (nombre, dirección, apertura y cierre) |
+| `PATCH` | `/admin/venues/{id}` | Edita parcialmente y permite reactivar con `is_active: true` |
+| `DELETE` | `/admin/venues/{id}` | Baja lógica de la sede |
+| `GET` | `/admin/spaces` | Lista todos los espacios, con filtro opcional `venue_id` |
+| `POST` | `/admin/spaces` | Crea un espacio en una sede (tipo y número) |
+| `PATCH` | `/admin/spaces/{id}` | Edita tipo, número, sede y estado |
+| `DELETE` | `/admin/spaces/{id}` | Baja lógica del espacio |
+
+Decisiones que sostienen el módulo:
+
+- **El permiso se resuelve contra la base en cada request, no contra el token.** Si a alguien se le
+  quita `is_admin`, deja de poder operar en el acto, sin esperar a que venza su JWT. Con un usuario
+  común, `/admin/*` devuelve 403 `admin_required`.
+- **El administrador se designa por variable de entorno.** `ADMIN_EMAIL` marca `is_admin=true` al
+  arrancar si ese usuario existe; si todavía no está registrado, queda un aviso en el log y se
+  promueve en el arranque siguiente. No hay contraseña ni secreto en el repo: es sólo un correo.
+- **Las sedes y los espacios no se borran, se dan de baja** (`is_active=false`). Las reservas
+  históricas apuntan al espacio: borrar la fila rompería el historial. Lo que sí se rechaza con 409
+  es dar de baja una sede o un espacio que tiene reservas activas de hoy en adelante
+  (`venue_has_future_reservations`, `space_has_future_reservations`), para no dejar reservas colgadas
+  de un lugar que ya no existe.
+- **El nombre del espacio se compone solo** (`sede_dirección_tipo_número`, por ejemplo
+  `Moron_Rivadavia_19850_Paddle_1`) y se recalcula si cambia el nombre o la dirección de la sede, o el
+  tipo o el número del espacio.
+- **Unicidad real, no de formulario.** El nombre de sede es único sin distinguir mayúsculas
+  (`venue_already_exists`) y no puede haber dos espacios con la misma sede, tipo y número
+  (`space_already_exists`), porque la base tiene esa restricción.
+- **La columna nueva se agrega sola.** El TP no usa Alembic: `Base.metadata.create_all` crea tablas
+  pero no agrega columnas a una tabla existente, así que `app/bootstrap.py` hace un `ALTER TABLE`
+  idempotente para `users.is_admin` cuando la base viene de una versión anterior.
+
+## 11. Errores
 
 Todos los errores tienen el mismo cuerpo, con el status correcto:
 
@@ -272,7 +316,7 @@ Todos los errores tienen el mismo cuerpo, con el status correcto:
 | 409 | Correo ya registrado, horario ya reservado, reserva ya cancelada |
 | 500 | Error interno (sin filtrar detalles al cliente) |
 
-## 11. Estructura
+## 12. Estructura
 
 ```
 backend/
@@ -285,9 +329,9 @@ backend/
     security.py        # bcrypt, JWT, get_current_user, modo Firebase
     errors.py          # excepciones de dominio + handlers
     seed.py            # datos de ejemplo idempotentes
-    routers/           # auth, users, venues, spaces, reservations, devices
+    routers/           # auth, users, venues, spaces, admin, reservations, devices
     services/          # reservations (reglas de negocio), notifications (push)
-  tests/               # 116 tests
+  tests/               # 163 tests
   docs/                # modelo-datos.md, api.md
   requirements.txt  Dockerfile  render.yaml  .env.example  README.md  openapi.json
 ```
