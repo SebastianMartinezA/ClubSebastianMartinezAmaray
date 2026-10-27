@@ -31,9 +31,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     password_reset_token_expire_minutes: int = 30
 
-    # Autenticación: "local" (JWT propio, por defecto) o "firebase" (ID tokens de Firebase Auth)
-    auth_provider: str = "local"
-    firebase_project_id: str = ""
+    # Autenticación: "hybrid" (por defecto) acepta ID tokens de Firebase Auth para la app y el
+    # JWT propio para el backoffice y las pruebas; "firebase" sólo ID tokens; "local" sólo JWT propio.
+    auth_provider: str = "hybrid"
+    firebase_project_id: str = "club-smartinez-amaray"
     firebase_jwks_url: str = ""
 
     # SMTP para el correo de recuperación de contraseña (sirve en local: el plan gratuito de

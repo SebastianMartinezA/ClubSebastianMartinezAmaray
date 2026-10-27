@@ -19,9 +19,11 @@ def test_database_url_ya_normalizada_no_se_toca():
 
 
 def test_defaults_seguros():
+    # Los valores por defecto del código, sin importar el entorno de la suite
+    # (conftest fuerza AUTH_PROVIDER=local para que los tests usen el JWT propio).
+    assert Settings.model_fields["auth_provider"].default == "hybrid"
+    assert Settings.model_fields["firebase_project_id"].default == "club-smartinez-amaray"
     settings = get_settings()
-    # El modo Firebase viene apagado por defecto: se usa el JWT propio.
-    assert settings.auth_provider == "local"
     # El token de recuperación solo viaja en la respuesta cuando DEBUG está activo.
     assert settings.password_reset_token_expire_minutes == 30
 

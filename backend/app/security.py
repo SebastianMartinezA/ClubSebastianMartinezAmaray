@@ -84,6 +84,18 @@ def _get_firebase_jwk_client():
     return _firebase_jwk_client
 
 
+def _is_firebase_id_token(token: str) -> bool:
+    """Un ID token de Firebase Auth viene firmado con RS256; el JWT propio, con HS256.
+
+    Se mira sólo el encabezado (sin validar la firma) para decidir qué verificador usar.
+    """
+    try:
+        header = jwt.get_unverified_header(token)
+    except jwt.PyJWTError:
+        return False
+    return header.get("alg") == "RS256"
+
+
 def verify_firebase_id_token(token: str) -> dict:
     """Valida un ID token de Firebase Auth contra las claves públicas de Google (JWKS)."""
     project_id = settings.firebase_project_id
@@ -116,7 +128,11 @@ def get_current_user(
         raise UnauthorizedError("Falta el token de autenticación.", code="missing_token")
     token = credentials.credentials
 
-    if settings.auth_provider.lower() == "firebase":
+    provider = settings.auth_provider.strip().lower()
+    # En modo "hybrid" conviven los dos esquemas: la app se autentica con Firebase Auth
+    # (ID tokens RS256) y el backoffice, los curls y las pruebas siguen usando el JWT
+    # propio (HS256). "firebase" acepta sólo ID tokens; "local", sólo el JWT propio.
+    if provider in {"firebase", "hybrid"} and _is_firebase_id_token(token):
         payload = verify_firebase_id_token(token)
         email = (payload.get("email") or "").lower()
         user = db.query(User).filter(User.email == email).one_or_none()

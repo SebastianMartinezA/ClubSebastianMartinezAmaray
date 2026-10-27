@@ -57,6 +57,29 @@ class UserRegister(BaseModel):
         return _validate_birth_date(value)
 
 
+class FirebaseSyncRequest(BaseModel):
+    """Alta o sincronización del usuario local a partir de una sesión de Firebase Auth.
+
+    El correo no viaja en el cuerpo: se toma del ID token ya validado, que es la única
+    fuente confiable. Los nombres son obligatorios cuando el usuario todavía no existe
+    en la base; si existe, se actualizan sólo los campos que vienen con valor.
+    """
+
+    first_name: str | None = Field(default=None, max_length=100)
+    last_name: str | None = Field(default=None, max_length=100)
+    birth_date: date_type | None = None
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def _strip_names(cls, value: str | None) -> str | None:
+        return None if value is None else _strip_name(value)
+
+    @field_validator("birth_date")
+    @classmethod
+    def _check_birth_date(cls, value: date_type | None) -> date_type | None:
+        return _validate_birth_date(value)
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)

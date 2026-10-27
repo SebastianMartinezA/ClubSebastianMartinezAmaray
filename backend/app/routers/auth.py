@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -19,6 +20,7 @@ from ..errors import (
 )
 from ..models import PasswordResetToken, User
 from ..schemas import (
+    FirebaseSyncRequest,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     MessageOut,
@@ -29,11 +31,13 @@ from ..schemas import (
     UserRegister,
 )
 from ..security import (
+    bearer_scheme,
     create_access_token,
     generate_reset_token,
     get_current_user,
     hash_password,
     hash_reset_token,
+    verify_firebase_id_token,
     verify_password,
 )
 from ..services.notifications import send_password_reset_email
@@ -44,6 +48,11 @@ settings = get_settings()
 
 # Hash descartable: iguala el tiempo de respuesta cuando el correo no existe (regla 12).
 _DUMMY_HASH = hash_password("contrasena-de-relleno-para-timing")
+
+# Marca de los usuarios creados desde Firebase Auth: no es un hash bcrypt válido, así que
+# `verify_password` siempre falla y /auth/login nunca puede validarlos (la credencial vive
+# en Firebase). El login local queda sólo para el backoffice y las pruebas.
+_FIREBASE_ONLY_HASH = "!firebase-auth"
 
 _FORGOT_MESSAGE = (
     "Si el correo está registrado, te enviamos las instrucciones para restablecer la contraseña."
@@ -114,6 +123,71 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
 
     token, expires_in = create_access_token(user)
     return TokenResponse(access_token=token, expires_in=expires_in, user=UserOut.model_validate(user))
+
+
+@router.post(
+    "/firebase-sync",
+    response_model=UserOut,
+    responses=documented_errors(400, 401, 409),
+    summary="Alta o sincronización del usuario a partir de una sesión de Firebase Auth",
+)
+def firebase_sync(
+    payload: FirebaseSyncRequest,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    """Crea o actualiza la fila local del usuario autenticado con Firebase Auth.
+
+    La app llama a este endpoint después de `signInWithEmailAndPassword` o de
+    `createUserWithEmailAndPassword`: la credencial la guarda Firebase y el backend sólo
+    mantiene el perfil y los permisos (`is_admin`) en PostgreSQL, asociados por correo.
+    Es idempotente: si el usuario ya existe, actualiza los campos que llegan con valor.
+    """
+    if credentials is None or not credentials.credentials:
+        raise UnauthorizedError("Falta el token de autenticación.", code="missing_token")
+
+    claims = verify_firebase_id_token(credentials.credentials)
+    email = _normalize_email(claims.get("email") or "")
+    if not email:
+        raise UnauthorizedError(
+            "El ID token de Firebase no incluye un correo.", code="invalid_token"
+        )
+
+    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    if user is None:
+        first_name = (payload.first_name or "").strip()
+        last_name = (payload.last_name or "").strip()
+        if not first_name or not last_name:
+            raise ValidationError(
+                "Para crear el usuario hacen falta el nombre y el apellido.",
+                code="names_required",
+            )
+        user = User(
+            email=email,
+            password_hash=_FIREBASE_ONLY_HASH,
+            first_name=first_name,
+            last_name=last_name,
+            birth_date=payload.birth_date,
+        )
+        db.add(user)
+        try:
+            db.commit()
+        except IntegrityError as exc:  # dos altas simultáneas del mismo correo
+            db.rollback()
+            raise ConflictError(
+                "Ese correo ya está registrado.", code="email_already_registered"
+            ) from exc
+    else:
+        if payload.first_name:
+            user.first_name = payload.first_name
+        if payload.last_name:
+            user.last_name = payload.last_name
+        if payload.birth_date is not None:
+            user.birth_date = payload.birth_date
+        db.commit()
+
+    db.refresh(user)
+    return UserOut.model_validate(user)
 
 
 @router.post(

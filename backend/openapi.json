@@ -108,6 +108,73 @@
         }
       }
     },
+    "/auth/firebase-sync": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Alta o sincronización del usuario a partir de una sesión de Firebase Auth",
+        "description": "Crea o actualiza la fila local del usuario autenticado con Firebase Auth.\n\nLa app llama a este endpoint después de `signInWithEmailAndPassword` o de\n`createUserWithEmailAndPassword`: la credencial la guarda Firebase y el backend sólo\nmantiene el perfil y los permisos (`is_admin`) en PostgreSQL, asociados por correo.\nEs idempotente: si el usuario ya existe, actualiza los campos que llegan con valor.",
+        "operationId": "firebase_sync_auth_firebase_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirebaseSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso (por ejemplo, el espacio ya está reservado en ese horario).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/auth/forgot-password": {
       "post": {
         "tags": [
@@ -1768,6 +1835,49 @@
         ],
         "title": "ErrorOut",
         "description": "Cuerpo uniforme de error de la API: {\"detail\": \"...\", \"code\": \"...\"}."
+      },
+      "FirebaseSyncRequest": {
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          }
+        },
+        "type": "object",
+        "title": "FirebaseSyncRequest",
+        "description": "Alta o sincronización del usuario local a partir de una sesión de Firebase Auth.\n\nEl correo no viaja en el cuerpo: se toma del ID token ya validado, que es la única\nfuente confiable. Los nombres son obligatorios cuando el usuario todavía no existe\nen la base; si existe, se actualizan sólo los campos que vienen con valor."
       },
       "ForgotPasswordRequest": {
         "properties": {
