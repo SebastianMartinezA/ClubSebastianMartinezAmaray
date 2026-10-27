@@ -7,6 +7,10 @@ analyzer:
   errors:
     # Missing doc comments are not a requirement of this assignment.
     public_member_api_docs: ignore
+  exclude:
+    - build/**
+    - android/**
+    - linux/**
 
 linter:
   rules:

@@ -30,3 +30,15 @@ app/ios/Pods/
 .DS_Store
 .idea/
 .vscode/
+
+# Artefactos de build y pruebas locales
+app/build/
+app/.dart_tool/
+app/.metadata
+app/linux/
+*.apk
+*.log
+.toolchain-backup/
+emu*/
+logs/
+entrega/build/
