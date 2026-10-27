@@ -31,6 +31,13 @@ class ApiClient {
   /// Bearer token of the current session; set by `AuthService`.
   String? authToken;
 
+  /// Fuente del token de la sesión (ver [AuthService]).
+  ///
+  /// Con Firebase Auth el ID token vence a la hora, así que en vez de guardar un
+  /// valor fijo se registra esta función: antes de cada request se pide el token
+  /// vigente y el SDK lo renueva sin que la pantalla se entere.
+  Future<String?> Function()? tokenProvider;
+
   /// Called when the API rejects the token (it expired or is invalid) so the
   /// session can be closed and the app can go back to the login screen.
   void Function()? onUnauthorized;
@@ -116,7 +123,18 @@ class ApiClient {
       request.headers['Content-Type'] = 'application/json; charset=utf-8';
       request.body = jsonEncode(body);
     }
-    final String? token = authToken;
+    String? token = authToken;
+    // Con Firebase Auth el ID token vence a la hora: el SDK lo renueva solo, así que
+    // se le pide uno vigente antes de cada request (si todavía sirve, lo devuelve de
+    // la caché sin ir a la red).
+    final Future<String?> Function()? provider = tokenProvider;
+    if (provider != null) {
+      try {
+        token = await provider() ?? token;
+      } catch (error) {
+        debugPrint('[ApiClient] no se pudo renovar el ID token: $error');
+      }
+    }
     if (token != null && token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';
     }
