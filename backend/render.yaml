@@ -34,7 +34,11 @@ services:
       - key: PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
         value: "30"
       - key: AUTH_PROVIDER
-        value: local
+        # "hybrid": la app se autentica con Firebase Auth (ID tokens RS256) y el
+        # backoffice, los curls y las pruebas siguen usando el JWT propio (HS256).
+        value: hybrid
+      - key: FIREBASE_PROJECT_ID
+        value: club-smartinez-amaray
       # Las sedes están en Argentina y Render corre en UTC: sin esta variable el
       # backend rechazaría como "pasadas" las reservas de la tarde/noche.
       - key: TIMEZONE
