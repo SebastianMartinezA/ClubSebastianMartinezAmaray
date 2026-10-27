@@ -129,14 +129,20 @@ def get_current_user(
     token = credentials.credentials
 
     provider = settings.auth_provider.strip().lower()
-    # En modo "hybrid" conviven los dos esquemas: la app se autentica con Firebase Auth
-    # (ID tokens RS256) y el backoffice, los curls y las pruebas siguen usando el JWT
-    # propio (HS256). "firebase" acepta sólo ID tokens; "local", sólo el JWT propio.
-    if provider in {"firebase", "hybrid"} and _is_firebase_id_token(token):
+    # El esquema se elige por el token, no por la configuración: si viene firmado con
+    # RS256 es un ID token de Firebase Auth (se valida contra el JWKS de Google, con
+    # audiencia y emisor del proyecto) y si viene con HS256 es el JWT propio. Así la
+    # app y el backoffice conviven sin depender de una variable de entorno. El modo
+    # "firebase" es el único que rechaza el JWT propio; "hybrid" y "local" lo aceptan.
+    if _is_firebase_id_token(token):
         payload = verify_firebase_id_token(token)
         email = (payload.get("email") or "").lower()
         user = db.query(User).filter(User.email == email).one_or_none()
     else:
+        if provider == "firebase":
+            raise UnauthorizedError(
+                "Se requiere un ID token de Firebase Auth.", code="invalid_token"
+            )
         payload = decode_access_token(token)
         try:
             user_id = int(payload["sub"])
