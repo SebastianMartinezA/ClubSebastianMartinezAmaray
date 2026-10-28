@@ -175,6 +175,36 @@ class SportSpaceOut(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Consultas abiertas (sin token). Sólo lectura y sin datos sensibles.
+# --------------------------------------------------------------------------- #
+class PublicUserOut(BaseModel):
+    """Socio visto desde afuera: sin contraseña, permisos ni fecha de nacimiento."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr
+    first_name: str
+    last_name: str
+    created_at: datetime
+
+
+class PublicVenueOut(VenueOut):
+    """Sede con sus espacios ya anidados, para no encadenar llamadas."""
+
+    spaces: list[SportSpaceOut] = []
+
+
+class PublicSummary(BaseModel):
+    """Conteos del club para una portada o un chequeo rápido."""
+
+    users: int
+    venues: int
+    spaces: int
+    active_reservations: int
+
+
+# --------------------------------------------------------------------------- #
 # Administración del catálogo (sedes y espacios). Requiere perfil de administrador.
 # --------------------------------------------------------------------------- #
 def _strip_text(value: str) -> str:

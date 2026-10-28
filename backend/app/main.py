@@ -16,7 +16,7 @@ from .bootstrap import ensure_admin_column, ensure_catalog_indexes, promote_admi
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .errors import register_exception_handlers
-from .routers import admin, auth, devices, reservations, spaces, users, venues
+from .routers import admin, auth, devices, public, reservations, spaces, users, venues
 from .seed import seed_demo_data
 from .services import scheduler
 
@@ -121,6 +121,7 @@ register_exception_handlers(app)
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(public.router)
 app.include_router(venues.router)
 app.include_router(spaces.router)
 app.include_router(admin.router)

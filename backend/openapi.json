@@ -393,6 +393,175 @@
         ]
       }
     },
+    "/public/users": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Todos los usuarios del club (sin token)",
+        "description": "Nómina de socios activos, ordenada por apellido.\n\nDevuelve lo mínimo para identificar a la persona: id, nombre, apellido,\ncorreo y fecha de alta. Nada de contraseñas, permisos ni fecha de nacimiento.",
+        "operationId": "list_public_users_public_users_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Cuántos devolver",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Cuántos devolver"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Cuántos saltear",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Cuántos saltear"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUserOut"
+                  },
+                  "title": "Response List Public Users Public Users Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/venues": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Sedes con sus espacios (sin token)",
+        "description": "Las sedes activas con la lista de espacios de cada una.\n\nEs el listado que necesita cualquiera para saber dónde se puede reservar sin\ntener que encadenar una llamada por sede.",
+        "operationId": "list_public_venues_public_venues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicVenueOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Public Venues Public Venues Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/spaces": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Todos los espacios deportivos (sin token)",
+        "description": "Espacios activos de todas las sedes, con el nombre de la sede ya resuelto.",
+        "operationId": "list_public_spaces_public_spaces_get",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por sede",
+              "title": "Venue Id"
+            },
+            "description": "Filtrar por sede"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SportSpaceOut"
+                  },
+                  "title": "Response List Public Spaces Public Spaces Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: la petición no cumple el formato o una regla de negocio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/summary": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Conteos del club (sin token)",
+        "description": "Cuántos socios, sedes, espacios y reservas activas hay.\n\nSirve para una portada o para chequear de un vistazo que la base tiene los\ndatos que debería, sin abrir un cliente de SQL.",
+        "operationId": "get_public_summary_public_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/venues": {
       "get": {
         "tags": [
@@ -2137,6 +2306,115 @@
           "code"
         ],
         "title": "MessageOut"
+      },
+      "PublicSummary": {
+        "properties": {
+          "users": {
+            "type": "integer",
+            "title": "Users"
+          },
+          "venues": {
+            "type": "integer",
+            "title": "Venues"
+          },
+          "spaces": {
+            "type": "integer",
+            "title": "Spaces"
+          },
+          "active_reservations": {
+            "type": "integer",
+            "title": "Active Reservations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "users",
+          "venues",
+          "spaces",
+          "active_reservations"
+        ],
+        "title": "PublicSummary",
+        "description": "Conteos del club para una portada o un chequeo rápido."
+      },
+      "PublicUserOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "created_at"
+        ],
+        "title": "PublicUserOut",
+        "description": "Socio visto desde afuera: sin contraseña, permisos ni fecha de nacimiento."
+      },
+      "PublicVenueOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "opening_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Opening Time"
+          },
+          "closing_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Closing Time"
+          },
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/SportSpaceOut"
+            },
+            "type": "array",
+            "title": "Spaces",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "address",
+          "opening_time",
+          "closing_time"
+        ],
+        "title": "PublicVenueOut",
+        "description": "Sede con sus espacios ya anidados, para no encadenar llamadas."
       },
       "ReservationCreate": {
         "properties": {
