@@ -24,6 +24,7 @@ def test_openapi_json_incluye_la_administracion(client):
         "/admin/spaces",
         "/admin/spaces/{space_id}",
         "/admin/users",
+        "/admin/users/{user_id}",
         "/admin/venues",
         "/admin/venues/{venue_id}",
     ]

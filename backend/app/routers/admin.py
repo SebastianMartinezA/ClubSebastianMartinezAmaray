@@ -421,3 +421,41 @@ def migrate_users_to_firebase(db: Session = Depends(get_db)) -> dict:
         omitted,
     )
     return result
+
+
+@router.delete(
+    "/users/{user_id}",
+    summary="Eliminar un usuario",
+    responses=documented_errors(404, 409),
+)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+) -> dict:
+    """Borra un usuario y, en cascada, sus reservas y sus dispositivos.
+
+    Protecciones: no se puede borrar a uno mismo (dejaría al club sin el admin que está
+    operando) ni a otro administrador. El resto se borra de verdad: es la limpieza de
+    cuentas de prueba, no una baja lógica, porque una cuenta de prueba no tiene historia
+    que conservar.
+    """
+    user = db.get(User, user_id)
+    if user is None:
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
+    if user.id == current_user.id:
+        raise ConflictError("No podés eliminar tu propio usuario.", code="cannot_delete_self")
+    if user.is_admin:
+        raise ConflictError(
+            "No se puede eliminar a otro administrador: quitale primero el permiso.",
+            code="cannot_delete_admin",
+        )
+
+    reservations = db.execute(
+        select(func.count()).select_from(Reservation).where(Reservation.user_id == user.id)
+    ).scalar_one()
+    email = user.email
+    db.delete(user)
+    db.commit()
+    logger.info("Usuario eliminado: %s (id %s, %s reservas)", email, user_id, reservations)
+    return {"deleted": user_id, "email": email, "reservations_deleted": reservations}

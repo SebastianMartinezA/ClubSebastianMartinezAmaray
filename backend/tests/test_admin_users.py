@@ -88,3 +88,50 @@ def test_import_users_arma_el_payload_de_firebase(monkeypatch) -> None:
     import base64
 
     assert base64.b64decode(enviado["users"][0]["passwordHash"]).decode() == "$2b$12$abc"
+
+
+def test_eliminar_usuario(client, admin_headers: dict, db: Session) -> None:
+    victim = User(
+        email="temporal@example.com",
+        password_hash="$2b$12$abcdefghijklmnopqrstuv",
+        first_name="Temp",
+        last_name="Oral",
+    )
+    db.add(victim)
+    db.commit()
+    victim_id = victim.id
+
+    response = client.delete(f"/admin/users/{victim_id}", headers=admin_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["email"] == "temporal@example.com"
+    db.expire_all()  # el DELETE lo hizo otra sesión: hay que descartar la caché de esta
+    assert db.get(User, victim_id) is None
+
+
+def test_no_se_puede_eliminar_a_si_mismo(client, admin_headers: dict, db: Session) -> None:
+    from app.seed import DEMO_EMAIL
+
+    me = db.execute(select(User).where(User.email == DEMO_EMAIL)).scalar_one()
+    response = client.delete(f"/admin/users/{me.id}", headers=admin_headers)
+    assert response.status_code == 409, response.text
+    assert "cannot_delete_self" in response.text
+
+
+def test_no_se_puede_eliminar_a_otro_admin(client, admin_headers: dict, db: Session) -> None:
+    otro = User(
+        email="otro.admin@example.com",
+        password_hash="$2b$12$abcdefghijklmnopqrstuv",
+        first_name="Otro",
+        last_name="Admin",
+        is_admin=True,
+    )
+    db.add(otro)
+    db.commit()
+    response = client.delete(f"/admin/users/{otro.id}", headers=admin_headers)
+    assert response.status_code == 409, response.text
+    assert "cannot_delete_admin" in response.text
+
+
+def test_eliminar_usuario_inexistente_da_404(client, admin_headers: dict) -> None:
+    response = client.delete("/admin/users/999999", headers=admin_headers)
+    assert response.status_code == 404, response.text
