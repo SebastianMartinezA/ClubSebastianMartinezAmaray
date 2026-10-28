@@ -12,6 +12,7 @@ import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/catalog_service.dart';
 import 'services/device_service.dart';
+import 'services/local_notifications.dart';
 import 'services/push_service.dart';
 import 'services/reservation_service.dart';
 import 'services/session_storage.dart';
@@ -60,6 +61,13 @@ Future<void> main() async {
   // dying on the 15 second timeout. The result is ignored on purpose: if the
   // service does not wake up, the screen that made the real request shows the
   // error a few seconds later.
+  // Con la app abierta, FCM entrega el mensaje pero Android no muestra nada:
+  // este servicio lo publica como notificación local. Si el permiso o el canal
+  // fallan, el push sigue funcionando en segundo plano como antes.
+  if (pushEnabled) {
+    await LocalNotifications().init();
+  }
+
   unawaited(api.warmUp());
 
   // When a `401` arrives (expired or invalid token) the session closes itself;
