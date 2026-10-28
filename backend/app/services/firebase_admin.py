@@ -12,6 +12,7 @@ import base64
 import json
 import logging
 import time as time_module
+import uuid
 
 import requests
 
@@ -74,6 +75,9 @@ def import_users(users: list[dict]) -> dict:
         "hashAlgorithm": "BCRYPT",
         "users": [
             {
+                # batchCreate exige un localId (el UID): si no se manda, rechaza la carga
+                # entera con "localId is missing".
+                "localId": uuid.uuid4().hex,
                 "email": user["email"],
                 "passwordHash": base64.b64encode(user["password_hash"].encode("utf-8")).decode("ascii"),
                 "emailVerified": True,

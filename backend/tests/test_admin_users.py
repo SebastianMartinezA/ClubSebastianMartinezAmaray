@@ -85,6 +85,7 @@ def test_import_users_arma_el_payload_de_firebase(monkeypatch) -> None:
     result = firebase_admin.import_users([{"email": "a@b.com", "password_hash": "$2b$12$abc"}])
     assert result["created"] == 1
     assert enviado["hashAlgorithm"] == "BCRYPT"
+    assert enviado["users"][0]["localId"]  # batchCreate lo exige
     import base64
 
     assert base64.b64decode(enviado["users"][0]["passwordHash"]).decode() == "$2b$12$abc"
