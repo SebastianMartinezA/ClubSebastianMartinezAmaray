@@ -12,7 +12,12 @@
           "package_name": "ar.unimoron.club_sebastian_martinez_amaray"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "784840267639-ie6f0lu07a7lekp4pfhv8hob9vffcplp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAXowOofs62UzNZ6oBNLR-hJvVNHcfDV7I"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "784840267639-ie6f0lu07a7lekp4pfhv8hob9vffcplp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

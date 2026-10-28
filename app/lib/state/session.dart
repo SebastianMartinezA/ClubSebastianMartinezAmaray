@@ -83,6 +83,14 @@ class Session extends ChangeNotifier {
     unawaited(_push.syncTokenAfterLogin());
   }
 
+  /// Ingreso con la cuenta de Google (Firebase Auth lo canjea por su ID token).
+  Future<void> signInWithGoogle() async {
+    _user = await _auth.signInWithGoogle();
+    _status = SessionStatus.authenticated;
+    notifyListeners();
+    unawaited(_push.syncTokenAfterLogin());
+  }
+
   /// Registration; the API logs the user in, so the session starts here too.
   Future<void> signUp({
     required String email,

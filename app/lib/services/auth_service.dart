@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/api_error.dart';
 import '../models/user.dart';
@@ -32,8 +34,22 @@ class AuthService {
   /// `android/app/google-services.json` (club-smartinez-amaray).
   final fb.FirebaseAuth _firebase = fb.FirebaseAuth.instance;
 
+  /// Cliente OAuth de tipo *web* del proyecto: es el `serverClientId` con el que
+  /// Google devuelve el `idToken`. Sin él, `signIn()` sólo entrega un access
+  /// token y Firebase no puede canjearlo.
+  static const String _googleServerClientId =
+      '784840267639-ie6f0lu07a7lekp4pfhv8hob9vffcplp.apps.googleusercontent.com';
+
+  final GoogleSignIn _google = GoogleSignIn(
+    scopes: const <String>['email', 'profile'],
+    serverClientId: _googleServerClientId,
+  );
+
   String? _token;
   User? _user;
+
+  /// Código propio para distinguir "el usuario cerró el diálogo de Google".
+  static const String googleCancelled = 'google_sign_in_cancelled';
 
   String? get token => _token;
 
@@ -49,6 +65,54 @@ class AuthService {
       await _firebase.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
+      );
+    } on fb.FirebaseAuthException catch (error) {
+      throw _mapFirebaseError(error);
+    }
+    return _startSession();
+  }
+
+  /// Ingreso con la cuenta de Google.
+  ///
+  /// Google autentica la cuenta y entrega un `idToken`; Firebase lo canjea por
+  /// su propio ID token, que es el que valida el backend. Si el correo todavía
+  /// no tiene fila en PostgreSQL, `_startSession` la crea con
+  /// `POST /auth/firebase-sync` usando el nombre del perfil de Google.
+  Future<User> signInWithGoogle() async {
+    final GoogleSignInAccount? account;
+    try {
+      account = await _google.signIn();
+    } on PlatformException catch (error) {
+      throw ApiException(
+        code: ApiErrorCodes.unexpectedError,
+        message: 'No pudimos abrir la cuenta de Google (${error.code}). '
+            'Revisá que la app esté firmada con la huella registrada en Firebase.',
+      );
+    }
+    if (account == null) {
+      // El usuario cerró el diálogo: no es un error, la pantalla no muestra nada.
+      throw const ApiException(
+        code: AuthService.googleCancelled,
+        message: 'Cancelaste el ingreso con Google.',
+      );
+    }
+
+    final GoogleSignInAuthentication auth = await account.authentication;
+    final String? idToken = auth.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw const ApiException(
+        code: ApiErrorCodes.unexpectedError,
+        message: 'Google no devolvió la credencial. Suele faltar la huella SHA-1 '
+            'del APK en Firebase (Configuración del proyecto → Tus apps).',
+      );
+    }
+
+    try {
+      await _firebase.signInWithCredential(
+        fb.GoogleAuthProvider.credential(
+          idToken: idToken,
+          accessToken: auth.accessToken,
+        ),
       );
     } on fb.FirebaseAuthException catch (error) {
       throw _mapFirebaseError(error);
@@ -204,6 +268,7 @@ class AuthService {
     _api.authToken = null;
     try {
       await _firebase.signOut();
+      await _google.signOut();
     } catch (error) {
       debugPrint('[auth] no se pudo cerrar la sesión de Firebase: $error');
     }
@@ -292,6 +357,13 @@ class AuthService {
         return const ApiException(
           code: ApiErrorCodes.invalidCredentials,
           message: 'El correo o la contraseña son incorrectos.',
+        );
+      case 'account-exists-with-different-credential':
+        // Google dice que el correo ya existe: la cuenta se creó con contraseña.
+        return const ApiException(
+          code: ApiErrorCodes.emailAlreadyRegistered,
+          message: 'Ese correo ya tiene una cuenta con contraseña: ingresá con '
+              'tu contraseña o recuperala.',
         );
       case 'email-already-in-use':
         return const ApiException(
