@@ -1365,6 +1365,106 @@
         }
       }
     },
+    "/admin/users": {
+      "get": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Listar los usuarios del club",
+        "description": "Devuelve todos los usuarios con su estado y su perfil de permisos.\n\nNo expone el hash de la contraseña: para la UI alcanza con saber quién es admin y\nquién está activo.",
+        "operationId": "list_users_admin_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserAdminOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Users Admin Users Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/admin/firebase/migrate": {
+      "post": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Importar los usuarios de la base a Firebase Authentication",
+        "description": "Alta masiva en Firebase Auth conservando la contraseña de cada socio.\n\nImporta el hash bcrypt que ya está en la base, así nadie tiene que resetear nada. Es\nidempotente: los correos que ya existen en Firebase vuelven como error y se informan.",
+        "operationId": "migrate_users_to_firebase_admin_firebase_migrate_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Migrate Users To Firebase Admin Firebase Migrate Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o el usuario no está autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario autenticado no tiene permiso sobre el recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/reservations": {
       "get": {
         "tags": [
@@ -2299,6 +2399,64 @@
           "user"
         ],
         "title": "TokenResponse"
+      },
+      "UserAdminOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "created_at",
+          "is_active",
+          "is_admin"
+        ],
+        "title": "UserAdminOut",
+        "description": "Usuario visto por el administrador: agrega el estado y el perfil de permisos."
       },
       "UserLogin": {
         "properties": {

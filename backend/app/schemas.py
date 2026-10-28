@@ -116,6 +116,13 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class UserAdminOut(UserOut):
+    """Usuario visto por el administrador: agrega el estado y el perfil de permisos."""
+
+    is_active: bool
+    is_admin: bool
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

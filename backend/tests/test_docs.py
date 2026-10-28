@@ -20,8 +20,10 @@ def test_openapi_json_incluye_la_administracion(client):
     esquema = json.loads((RAIZ / "openapi.json").read_text(encoding="utf-8"))
     rutas_admin = sorted(ruta for ruta in esquema["paths"] if ruta.startswith("/admin"))
     assert rutas_admin == [
+        "/admin/firebase/migrate",
         "/admin/spaces",
         "/admin/spaces/{space_id}",
+        "/admin/users",
         "/admin/venues",
         "/admin/venues/{venue_id}",
     ]

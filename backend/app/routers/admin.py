@@ -19,16 +19,18 @@ from sqlalchemy.orm import Session
 from ..clock import now_local
 from ..database import get_db
 from ..errors import ConflictError, NotFoundError, ValidationError, documented_errors
-from ..models import Reservation, ReservationStatus, SportSpace, Venue
+from ..models import Reservation, ReservationStatus, SportSpace, User, Venue
 from ..schemas import (
     SportSpaceAdminOut,
     SportSpaceCreate,
     SportSpaceUpdate,
+    UserAdminOut,
     VenueAdminOut,
     VenueCreate,
     VenueUpdate,
 )
 from ..security import require_admin
+from ..services import firebase_admin
 from ..seed import build_space_name
 
 logger = logging.getLogger(__name__)
@@ -364,3 +366,58 @@ def deactivate_space(space_id: int, db: Session = Depends(get_db)) -> SportSpace
     db.refresh(space)
     logger.info("Espacio dado de baja: %s (id %s)", space.name, space.id)
     return _space_out(space)
+
+
+# --------------------------------------------------------------------------- #
+# Usuarios
+# --------------------------------------------------------------------------- #
+@router.get(
+    "/users",
+    response_model=list[UserAdminOut],
+    summary="Listar los usuarios del club",
+)
+def list_users(db: Session = Depends(get_db)) -> list[UserAdminOut]:
+    """Devuelve todos los usuarios con su estado y su perfil de permisos.
+
+    No expone el hash de la contraseña: para la UI alcanza con saber quién es admin y
+    quién está activo.
+    """
+    users = db.execute(select(User).order_by(User.id)).scalars().all()
+    return [UserAdminOut.model_validate(user) for user in users]
+
+
+@router.post(
+    "/firebase/migrate",
+    summary="Importar los usuarios de la base a Firebase Authentication",
+)
+def migrate_users_to_firebase(db: Session = Depends(get_db)) -> dict:
+    """Alta masiva en Firebase Auth conservando la contraseña de cada socio.
+
+    Importa el hash bcrypt que ya está en la base, así nadie tiene que resetear nada. Es
+    idempotente: los correos que ya existen en Firebase vuelven como error y se informan.
+    """
+    if not firebase_admin.configured():
+        raise ValidationError(
+            "Falta FCM_SERVICE_ACCOUNT_JSON: sin la cuenta de servicio no se puede escribir "
+            "en Firebase Authentication.",
+            code="firebase_not_configured",
+        )
+
+    users = db.execute(select(User).where(User.is_active.is_(True)).order_by(User.id)).scalars().all()
+    importable = [u for u in users if u.password_hash.startswith("$2")]
+    omitted = len(users) - len(importable)
+
+    if not importable:
+        return {"attempted": 0, "created": 0, "omitted": omitted, "errors": []}
+
+    result = firebase_admin.import_users(
+        [{"email": u.email, "password_hash": u.password_hash} for u in importable]
+    )
+    result["omitted"] = omitted
+    logger.info(
+        "Migración a Firebase: %s creados de %s intentados (%s sin contraseña local)",
+        result.get("created"),
+        result.get("attempted"),
+        omitted,
+    )
+    return result
