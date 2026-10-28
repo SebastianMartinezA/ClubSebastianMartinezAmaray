@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/api_error.dart';
+import '../services/auth_service.dart' show AuthService;
 import '../state/session.dart';
 import '../theme/app_theme.dart';
 import '../utils/validators.dart';
@@ -61,6 +62,36 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       setState(() {
         _error = error.userMessage;
+        _loading = false;
+      });
+    }
+  }
+
+  /// Mismo camino que `_submit`, pero la credencial la pone Google.
+  Future<void> _submitGoogle() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await context.read<Session>().signInWithGoogle();
+      if (!mounted) {
+        return;
+      }
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (BuildContext _) => const HomeScreen()),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        // Si el usuario cerró el diálogo no hay nada que mostrar.
+        _error = error.code == AuthService.googleCancelled
+            ? null
+            : error.userMessage;
         _loading = false;
       });
     }
@@ -132,6 +163,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       label: 'Ingresar',
                       loading: _loading,
                       onPressed: _submit,
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _submitGoogle,
+                      icon: const CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          'G',
+                          style: TextStyle(
+                            color: Color(0xFF1A73E8),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      label: const Text('Continuar con Google'),
                     ),
                     const SizedBox(height: 8),
                     TextButton(

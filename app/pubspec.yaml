@@ -33,6 +33,10 @@ dependencies:
   # Autenticación con Firebase Authentication (email y contraseña). El backend
   # valida el ID token contra las claves públicas de Google (modo híbrido).
   firebase_auth: ^5.3.1
+  # Ingreso con la cuenta de Google: el SDK devuelve un idToken de Google y
+  # Firebase lo cambia por su propio ID token (mismo camino que el login con
+  # correo y contraseña).
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:
