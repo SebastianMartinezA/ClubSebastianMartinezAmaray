@@ -37,6 +37,10 @@ dependencies:
   # Firebase lo cambia por su propio ID token (mismo camino que el login con
   # correo y contraseña).
   google_sign_in: ^6.2.1
+  # Avisos con la app abierta: FCM sólo auto-muestra la notificación en segundo
+  # plano, así que el mensaje del primer plano se publica como notificación
+  # local con el mismo texto.
+  flutter_local_notifications: ^17.2.4
 
 dev_dependencies:
   flutter_test:
