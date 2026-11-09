@@ -123,12 +123,30 @@ def set_password(email: str, password: str) -> bool:
         return False
     service_account = _service_account()
     project_id = service_account["project_id"]
+    base = f"https://identitytoolkit.googleapis.com/v1/projects/{project_id}"
     try:
         access_token = _access_token(service_account)
+        headers = {"Authorization": f"Bearer {access_token}"}
+        # accounts:update exige localId: con el correo solo contesta MISSING_LOCAL_ID.
+        lookup = requests.post(
+            f"{base}/accounts:lookup", headers=headers, json={"email": [email]}, timeout=30
+        )
+        if lookup.status_code >= 400:
+            logger.warning(
+                "No se pudo buscar %s en Firebase (%s): %s",
+                email,
+                lookup.status_code,
+                lookup.text[:200],
+            )
+            return False
+        users = lookup.json().get("users") or []
+        if not users:
+            logger.info("La cuenta %s no existe en Firebase: queda sólo el cambio local", email)
+            return False
         response = requests.post(
-            f"https://identitytoolkit.googleapis.com/v1/projects/{project_id}/accounts:update",
-            headers={"Authorization": f"Bearer {access_token}"},
-            json={"email": email, "password": password},
+            f"{base}/accounts:update",
+            headers=headers,
+            json={"localId": users[0]["localId"], "password": password},
             timeout=30,
         )
     except Exception:  # red, JWT o credenciales: el reset local ya está hecho, no se rompe el request
