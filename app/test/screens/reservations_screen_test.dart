@@ -9,8 +9,8 @@ void main() {
     WidgetTester tester,
   ) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations') {
         return jsonResponse(<Object>[
@@ -39,8 +39,8 @@ void main() {
   ) async {
     bool cancelled = false;
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations/1/cancel') {
         cancelled = true;
@@ -80,8 +80,8 @@ void main() {
     WidgetTester tester,
   ) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations') {
         return jsonResponse(<Object>[reservationJson()]);
@@ -103,8 +103,8 @@ void main() {
 
   testWidgets('muestra el estado vacío', (WidgetTester tester) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       return jsonResponse(<Object>[]);
     });

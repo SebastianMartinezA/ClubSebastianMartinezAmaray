@@ -65,10 +65,16 @@ class _HomeScreenState extends State<HomeScreen> {
     goToLogin();
   }
 
-  void _open(Widget screen) {
-    Navigator.of(context).push(
+  /// Abre una pantalla y, al volver, recarga las próximas reservas: reservar o
+  /// cancelar desde otra pantalla cambia este listado y el home no se reconstruye solo.
+  Future<void> _open(Widget screen) async {
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (BuildContext _) => screen),
     );
+    if (!mounted) {
+      return;
+    }
+    await _reload();
   }
 
   @override

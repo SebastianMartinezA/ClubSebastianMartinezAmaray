@@ -1,12 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show PlatformException;
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/api_error.dart';
 import '../models/user.dart';
 import '../utils/formatters.dart';
 import 'api_client.dart';
+import 'auth_backend.dart';
+import 'firebase_auth_backend.dart';
 import 'session_storage.dart';
 
 /// Autenticación y perfil.
@@ -22,34 +21,27 @@ import 'session_storage.dart';
 ///
 /// Endpoints propios que se siguen usando: `POST /auth/firebase-sync`,
 /// `GET /users/me` y `PATCH /users/me`.
+///
+/// El SDK de Firebase se usa a través de [AuthBackend]: los tests inyectan una
+/// implementación falsa y no dependen del plugin.
 class AuthService {
-  AuthService({required ApiClient api, required SessionStorage storage})
-      : _api = api,
-        _storage = storage;
+  AuthService({
+    required ApiClient api,
+    required SessionStorage storage,
+    AuthBackend? backend,
+  })  : _api = api,
+        _storage = storage,
+        _backend = backend ?? FirebaseAuthBackend();
 
   final ApiClient _api;
   final SessionStorage _storage;
-
-  /// Instancia del SDK de Firebase Auth; el proyecto está en
-  /// `android/app/google-services.json` (club-smartinez-amaray).
-  final fb.FirebaseAuth _firebase = fb.FirebaseAuth.instance;
-
-  /// Cliente OAuth de tipo *web* del proyecto: es el `serverClientId` con el que
-  /// Google devuelve el `idToken`. Sin él, `signIn()` sólo entrega un access
-  /// token y Firebase no puede canjearlo.
-  static const String _googleServerClientId =
-      '784840267639-ie6f0lu07a7lekp4pfhv8hob9vffcplp.apps.googleusercontent.com';
-
-  final GoogleSignIn _google = GoogleSignIn(
-    scopes: const <String>['email', 'profile'],
-    serverClientId: _googleServerClientId,
-  );
+  final AuthBackend _backend;
 
   String? _token;
   User? _user;
 
   /// Código propio para distinguir "el usuario cerró el diálogo de Google".
-  static const String googleCancelled = 'google_sign_in_cancelled';
+  static const String googleCancelled = AuthBackendCodes.googleCancelled;
 
   String? get token => _token;
 
@@ -62,12 +54,9 @@ class AuthService {
   /// El backend no recibe la contraseña: sólo el ID token que devuelve Firebase.
   Future<User> login({required String email, required String password}) async {
     try {
-      await _firebase.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-    } on fb.FirebaseAuthException catch (error) {
-      throw _mapFirebaseError(error);
+      await _backend.signInWithPassword(email: email.trim(), password: password);
+    } on AuthBackendException catch (error) {
+      throw _mapAuthError(error);
     }
     return _startSession();
   }
@@ -79,43 +68,32 @@ class AuthService {
   /// no tiene fila en PostgreSQL, `_startSession` la crea con
   /// `POST /auth/firebase-sync` usando el nombre del perfil de Google.
   Future<User> signInWithGoogle() async {
-    final GoogleSignInAccount? account;
+    final AuthUser? account;
     try {
-      account = await _google.signIn();
-    } on PlatformException catch (error) {
-      throw ApiException(
-        code: ApiErrorCodes.unexpectedError,
-        message: 'No pudimos abrir la cuenta de Google (${error.code}). '
-            'Revisá que la app esté firmada con la huella registrada en Firebase.',
-      );
+      account = await _backend.signInWithGoogle();
+    } on AuthBackendException catch (error) {
+      if (error.code == AuthBackendCodes.googlePlatformError) {
+        throw ApiException(
+          code: ApiErrorCodes.unexpectedError,
+          message: 'No pudimos abrir la cuenta de Google (${error.message}). '
+              'Revisá que la app esté firmada con la huella registrada en Firebase.',
+        );
+      }
+      if (error.code == AuthBackendCodes.googleMissingToken) {
+        throw const ApiException(
+          code: ApiErrorCodes.unexpectedError,
+          message: 'Google no devolvió la credencial. Suele faltar la huella SHA-1 '
+              'del APK en Firebase (Configuración del proyecto → Tus apps).',
+        );
+      }
+      throw _mapAuthError(error);
     }
     if (account == null) {
       // El usuario cerró el diálogo: no es un error, la pantalla no muestra nada.
       throw const ApiException(
-        code: AuthService.googleCancelled,
+        code: googleCancelled,
         message: 'Cancelaste el ingreso con Google.',
       );
-    }
-
-    final GoogleSignInAuthentication auth = await account.authentication;
-    final String? idToken = auth.idToken;
-    if (idToken == null || idToken.isEmpty) {
-      throw const ApiException(
-        code: ApiErrorCodes.unexpectedError,
-        message: 'Google no devolvió la credencial. Suele faltar la huella SHA-1 '
-            'del APK en Firebase (Configuración del proyecto → Tus apps).',
-      );
-    }
-
-    try {
-      await _firebase.signInWithCredential(
-        fb.GoogleAuthProvider.credential(
-          idToken: idToken,
-          accessToken: auth.accessToken,
-        ),
-      );
-    } on fb.FirebaseAuthException catch (error) {
-      throw _mapFirebaseError(error);
     }
     return _startSession();
   }
@@ -129,23 +107,14 @@ class AuthService {
     required String lastName,
     DateTime? birthDate,
   }) async {
-    final fb.UserCredential credential;
     try {
-      credential = await _firebase.createUserWithEmailAndPassword(
+      await _backend.createUser(
         email: email.trim(),
         password: password,
+        displayName: '${firstName.trim()} ${lastName.trim()}'.trim(),
       );
-    } on fb.FirebaseAuthException catch (error) {
-      throw _mapFirebaseError(error);
-    }
-
-    // El nombre para mostrar en Firebase (opcional: si falla, no se corta el alta).
-    try {
-      await credential.user?.updateDisplayName(
-        '${firstName.trim()} ${lastName.trim()}'.trim(),
-      );
-    } catch (error) {
-      debugPrint('[auth] no se pudo guardar el nombre en Firebase: $error');
+    } on AuthBackendException catch (error) {
+      throw _mapAuthError(error);
     }
 
     await _api.postMap(
@@ -166,10 +135,10 @@ class AuthService {
   /// tocar la pantalla. Nunca se revela si el correo existe.
   Future<String?> requestPasswordReset(String email) async {
     try {
-      await _firebase.sendPasswordResetEmail(email: email.trim());
-    } on fb.FirebaseAuthException catch (error) {
+      await _backend.sendPasswordResetEmail(email: email.trim());
+    } on AuthBackendException catch (error) {
       if (error.code != 'user-not-found') {
-        throw _mapFirebaseError(error);
+        throw _mapAuthError(error);
       }
     }
     return null;
@@ -224,13 +193,13 @@ class AuthService {
   /// token nuevo (no se reusa el guardado, que puede estar vencido) y se refresca
   /// el perfil cacheado.
   Future<bool> restore() async {
-    final fb.User? fbUser = _firebase.currentUser;
+    final AuthUser? fbUser = await _backend.currentUser();
     if (fbUser == null) {
       await _storage.clear();
       return false;
     }
 
-    _api.tokenProvider = () async => fbUser.getIdToken();
+    _api.tokenProvider = fbUser.getIdToken;
     final String? idToken = await fbUser.getIdToken();
     if (idToken == null || idToken.isEmpty) {
       await _storage.clear();
@@ -267,8 +236,7 @@ class AuthService {
     _api.tokenProvider = null;
     _api.authToken = null;
     try {
-      await _firebase.signOut();
-      await _google.signOut();
+      await _backend.signOut();
     } catch (error) {
       debugPrint('[auth] no se pudo cerrar la sesión de Firebase: $error');
     }
@@ -277,7 +245,7 @@ class AuthService {
 
   /// Arma la sesión local a partir del usuario que Firebase acaba de autenticar.
   Future<User> _startSession() async {
-    final fb.User? fbUser = _firebase.currentUser;
+    final AuthUser? fbUser = await _backend.currentUser();
     if (fbUser == null) {
       throw const ApiException(
         code: ApiErrorCodes.invalidCredentials,
@@ -286,7 +254,7 @@ class AuthService {
     }
 
     // Cada request pide el ID token vigente: Firebase lo renueva solo.
-    _api.tokenProvider = () async => fbUser.getIdToken();
+    _api.tokenProvider = fbUser.getIdToken;
     final String? idToken = await fbUser.getIdToken();
     if (idToken == null || idToken.isEmpty) {
       throw ApiException.unexpected();
@@ -313,7 +281,7 @@ class AuthService {
   }
 
   /// `POST /auth/firebase-sync` con los datos del perfil de Firebase.
-  Future<void> _syncLocalProfile(fb.User fbUser) async {
+  Future<void> _syncLocalProfile(AuthUser fbUser) async {
     final String displayName = (fbUser.displayName ?? '').trim();
     final List<String> parts =
         displayName.isEmpty ? <String>[] : displayName.split(RegExp(r'\s+'));
@@ -340,8 +308,8 @@ class AuthService {
     }
   }
 
-  /// Traduce los errores del SDK de Firebase a los códigos que ya conoce la UI.
-  ApiException _mapFirebaseError(fb.FirebaseAuthException error) {
+  /// Traduce los errores del proveedor a los códigos que ya conoce la UI.
+  ApiException _mapAuthError(AuthBackendException error) {
     switch (error.code) {
       case 'invalid-email':
         return const ApiException(

@@ -1,5 +1,6 @@
 import 'package:club_sebastian_martinez_amaray/models/api_error.dart';
 import 'package:club_sebastian_martinez_amaray/models/user.dart';
+import 'package:club_sebastian_martinez_amaray/services/auth_backend.dart';
 import 'package:club_sebastian_martinez_amaray/services/session_storage.dart';
 import 'package:club_sebastian_martinez_amaray/state/session.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,7 @@ void main() {
   group('signIn', () {
     test('sets the session as authenticated and keeps the user', () async {
       final TestApp app = TestApp(
-        (http.Request request) async => jsonResponse(tokenResponseJson()),
+        (http.Request request) async => jsonResponse(userJson()),
       );
 
       expect(app.session.status, SessionStatus.unknown);
@@ -27,10 +28,9 @@ void main() {
     test('does not change the session when the credentials are wrong',
         () async {
       final TestApp app = TestApp(
-        (http.Request request) async => errorResponse(
-          401,
-          'Correo o contraseña incorrectos.',
-          'invalid_credentials',
+        (http.Request request) async => jsonResponse(userJson()),
+        authBackend: FakeAuthBackend(
+          loginError: const AuthBackendException('wrong-password'),
         ),
       );
 
@@ -41,10 +41,9 @@ void main() {
   });
 
   group('signUp', () {
-    test('starts the session with the user of POST /auth/register', () async {
+    test('starts the session with the user of POST /auth/firebase-sync', () async {
       final TestApp app = TestApp(
-        (http.Request request) async =>
-            jsonResponse(tokenResponseJson(), statusCode: 201),
+        (http.Request request) async => jsonResponse(userJson()),
       );
 
       await app.session.signUp(
@@ -69,6 +68,10 @@ void main() {
       final TestApp app = TestApp(
         (http.Request request) async => jsonResponse(userJson()),
         storage: storage,
+        authBackend: FakeAuthBackend(
+          idToken: 'token-guardado',
+          rememberUser: true,
+        ),
       );
 
       final bool restored = await app.session.restore();
@@ -95,7 +98,7 @@ void main() {
   group('signOut', () {
     test('forgets the user and the token', () async {
       final TestApp app = TestApp(
-        (http.Request request) async => jsonResponse(tokenResponseJson()),
+        (http.Request request) async => jsonResponse(userJson()),
       );
       await app.signIn();
 
@@ -110,8 +113,8 @@ void main() {
   group('expired token', () {
     test('closes the session when the API answers token_expired', () async {
       final TestApp app = TestApp((http.Request request) async {
-        if (request.url.path == '/auth/login') {
-          return jsonResponse(tokenResponseJson());
+        if (request.url.path == '/users/me') {
+          return jsonResponse(userJson());
         }
         return errorResponse(
           401,
@@ -139,7 +142,7 @@ void main() {
   group('notifications', () {
     test('notifies listeners when the user logs in and out', () async {
       final TestApp app = TestApp(
-        (http.Request request) async => jsonResponse(tokenResponseJson()),
+        (http.Request request) async => jsonResponse(userJson()),
       );
       int notifications = 0;
       app.session.addListener(() => notifications++);
@@ -154,7 +157,7 @@ void main() {
 
     test('setUser updates the cached user', () async {
       final TestApp app = TestApp(
-        (http.Request request) async => jsonResponse(tokenResponseJson()),
+        (http.Request request) async => jsonResponse(userJson()),
       );
       await app.signIn();
 

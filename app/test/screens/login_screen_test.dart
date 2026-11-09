@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:club_sebastian_martinez_amaray/screens/home_screen.dart';
 import 'package:club_sebastian_martinez_amaray/screens/login_screen.dart';
 import 'package:club_sebastian_martinez_amaray/screens/register_screen.dart';
+import 'package:club_sebastian_martinez_amaray/services/auth_backend.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -10,19 +11,12 @@ import 'package:http/http.dart' as http;
 import '../helpers/test_helpers.dart';
 
 void main() {
-  /// Fake backend that answers login (and the reservations of the home screen).
-  FutureOr<http.Response> Function(http.Request) backendWithLogin({
-    bool ok = true,
-  }) {
+  /// Backend falso: la API contesta el perfil del usuario y las reservas del home.
+  /// La credencial la resuelve el `FakeAuthBackend` que arma `TestApp`.
+  FutureOr<http.Response> Function(http.Request) backendWithLogin() {
     return (http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return ok
-            ? jsonResponse(tokenResponseJson())
-            : errorResponse(
-                401,
-                'Correo o contraseña incorrectos.',
-                'invalid_credentials',
-              );
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations') {
         return jsonResponse(<Object>[]);
@@ -63,7 +57,13 @@ void main() {
   testWidgets('muestra el error cuando las credenciales son incorrectas', (
     WidgetTester tester,
   ) async {
-    final TestApp app = TestApp(backendWithLogin(ok: false));
+    // La credencial la rechaza el proveedor de autenticación, no la API.
+    final TestApp app = TestApp(
+      backendWithLogin(),
+      authBackend: FakeAuthBackend(
+        loginError: const AuthBackendException('wrong-password'),
+      ),
+    );
 
     await tester.pumpWidget(app.wrap(const LoginScreen()));
     await tester.enterText(

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:club_sebastian_martinez_amaray/app_navigator.dart';
 import 'package:club_sebastian_martinez_amaray/services/api_client.dart';
+import 'package:club_sebastian_martinez_amaray/services/auth_backend.dart';
 import 'package:club_sebastian_martinez_amaray/services/auth_service.dart';
 import 'package:club_sebastian_martinez_amaray/services/catalog_service.dart';
 import 'package:club_sebastian_martinez_amaray/services/device_service.dart';
@@ -187,16 +188,132 @@ Map<String, dynamic> reservationJson({
   };
 }
 
+/// Doble de [AuthBackend]: resuelve el login sin el SDK de Firebase, que no
+/// arranca en un test de host. Los códigos de error son los mismos que devuelve
+/// Firebase (`wrong-password`, `email-already-in-use`, ...).
+class FakeAuthBackend implements AuthBackend {
+  FakeAuthBackend({
+    this.idToken = 'id-token-de-prueba',
+    this.displayName = 'María Lopez',
+    this.email = 'maria@club.com',
+    this.loginError,
+    this.registerError,
+    this.resetError,
+    this.rememberUser = false,
+    this.googleUser = true,
+  });
+
+  final String idToken;
+  final String displayName;
+  final String email;
+
+  /// Si viene, `signInWithPassword` falla con este error.
+  final AuthBackendException? loginError;
+
+  /// Si viene, `createUser` falla con este error.
+  final AuthBackendException? registerError;
+
+  /// Si viene, `sendPasswordResetEmail` falla con este error.
+  final AuthBackendException? resetError;
+
+  /// Simula un usuario recordado entre aperturas (para `restore`).
+  final bool rememberUser;
+
+  /// `false` simula que la persona cerró el selector de Google.
+  final bool googleUser;
+
+  /// Llamadas recibidas, para poder afirmar sobre ellas.
+  final List<String> calls = <String>[];
+
+  /// Email con el que se intentó ingresar por última vez.
+  String? lastEmail;
+
+  bool signedOut = false;
+  AuthUser? _current;
+
+  AuthUser _buildUser() => AuthUser(
+        id: 'uid-prueba',
+        email: email,
+        displayName: displayName,
+        getIdToken: () async => idToken,
+      );
+
+  @override
+  Future<AuthUser> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    calls.add('signInWithPassword');
+    lastEmail = email;
+    if (loginError != null) {
+      throw loginError!;
+    }
+    return _current = _buildUser();
+  }
+
+  @override
+  Future<AuthUser> createUser({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    calls.add('createUser');
+    lastEmail = email;
+    if (registerError != null) {
+      throw registerError!;
+    }
+    return _current = _buildUser();
+  }
+
+  @override
+  Future<AuthUser?> signInWithGoogle() async {
+    calls.add('signInWithGoogle');
+    if (!googleUser) {
+      return null;
+    }
+    return _current = _buildUser();
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    calls.add('sendPasswordResetEmail');
+    lastEmail = email;
+    if (resetError != null) {
+      throw resetError!;
+    }
+  }
+
+  @override
+  Future<AuthUser?> currentUser() async {
+    if (_current != null) {
+      return _current;
+    }
+    if (rememberUser) {
+      return _current = _buildUser();
+    }
+    return null;
+  }
+
+  @override
+  Future<void> signOut() async {
+    calls.add('signOut');
+    signedOut = true;
+    _current = null;
+  }
+}
+
 /// Wires the whole service graph against a fake backend, exactly like
 /// `main.dart` does for the real app.
 class TestApp {
   TestApp(
     FutureOr<http.Response> Function(http.Request request) handler, {
     SessionStorage? storage,
+    FakeAuthBackend? authBackend,
   })  : backend = FakeBackend(handler),
-        storage = storage ?? InMemorySessionStorage() {
+        storage = storage ?? InMemorySessionStorage(),
+        authBackend = authBackend ?? FakeAuthBackend() {
     api = ApiClient(baseUrl: 'http://test.local', client: backend.client);
-    auth = AuthService(api: api, storage: this.storage);
+    auth = AuthService(api: api, storage: this.storage, backend: this.authBackend);
     catalog = CatalogService(api);
     reservations = ReservationService(api);
     devices = DeviceService(api);
@@ -212,6 +329,7 @@ class TestApp {
 
   final FakeBackend backend;
   final SessionStorage storage;
+  final FakeAuthBackend authBackend;
 
   late final ApiClient api;
   late final AuthService auth;
@@ -220,8 +338,9 @@ class TestApp {
   late final DeviceService devices;
   late final Session session;
 
-  /// Logs the test user in through the real `Session.signIn` (the fake backend
-  /// has to answer `POST /auth/login`).
+  /// Logs the test user in through the real `Session.signIn`. El backend falso de
+  /// autenticación resuelve la credencial; la API sólo tiene que contestar
+  /// `GET /users/me`.
   Future<void> signIn() => session.signIn(
         email: 'maria@club.com',
         password: 'Secreta123',

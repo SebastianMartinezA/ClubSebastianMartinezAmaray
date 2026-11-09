@@ -1,6 +1,7 @@
 import 'package:club_sebastian_martinez_amaray/screens/home_screen.dart';
 import 'package:club_sebastian_martinez_amaray/screens/reservations_screen.dart';
 import 'package:club_sebastian_martinez_amaray/screens/venues_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,8 +12,8 @@ void main() {
     WidgetTester tester,
   ) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations') {
         return jsonResponse(<Object>[
@@ -38,8 +39,8 @@ void main() {
     WidgetTester tester,
   ) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       return jsonResponse(<Object>[]);
     });
@@ -59,8 +60,8 @@ void main() {
   ) async {
     bool online = false;
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations') {
         if (!online) {
@@ -91,8 +92,8 @@ void main() {
 
   testWidgets('navega a la pantalla de sedes', (WidgetTester tester) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       if (request.url.path == '/reservations') {
         return jsonResponse(<Object>[]);
@@ -117,8 +118,8 @@ void main() {
 
   testWidgets('navega a mis reservas', (WidgetTester tester) async {
     final TestApp app = TestApp((http.Request request) async {
-      if (request.url.path == '/auth/login') {
-        return jsonResponse(tokenResponseJson());
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
       }
       return jsonResponse(<Object>[reservationJson()]);
     });
@@ -131,5 +132,48 @@ void main() {
 
     expect(find.byType(ReservationsScreen), findsOneWidget);
     expect(find.text('Cancelar reserva'), findsOneWidget);
+  });
+
+  testWidgets('recarga las próximas reservas al volver de otra pantalla', (
+    WidgetTester tester,
+  ) async {
+    int reservationCalls = 0;
+    final TestApp app = TestApp((http.Request request) async {
+      if (request.url.path == '/users/me') {
+        return jsonResponse(userJson());
+      }
+      if (request.url.path == '/reservations') {
+        reservationCalls++;
+        // Entra al home sin reservas y, cuando vuelve de otra pantalla, ya hay una:
+        // así el test falla si el home no vuelve a pedirlas.
+        return jsonResponse(
+          reservationCalls == 1
+              ? <Object>[]
+              : <Object>[reservationJson()],
+        );
+      }
+      if (request.url.path == '/venues') {
+        return jsonResponse(<Object>[venueJson()]);
+      }
+      return jsonResponse(<String, dynamic>{});
+    });
+    await app.signIn();
+
+    await tester.pumpWidget(app.wrap(const HomeScreen()));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No tenés reservas próximas'), findsOneWidget);
+
+    await tester.tap(find.text('Sedes'));
+    await tester.pumpAndSettle();
+    expect(find.byType(VenuesScreen), findsOneWidget);
+
+    // Volver a la pantalla anterior (el AppBar de la app no usa un BackButton
+    // estándar, así que se cierra la ruta desde el Navigator).
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pumpAndSettle();
+
+    expect(reservationCalls, 2);
+    expect(find.text('Moron_Rivadavia_19850_Futbol_1'), findsOneWidget);
+    expect(find.textContaining('No tenés reservas próximas'), findsNothing);
   });
 }

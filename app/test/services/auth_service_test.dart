@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:club_sebastian_martinez_amaray/models/api_error.dart';
 import 'package:club_sebastian_martinez_amaray/services/api_client.dart';
+import 'package:club_sebastian_martinez_amaray/services/auth_backend.dart';
 import 'package:club_sebastian_martinez_amaray/services/auth_service.dart';
 import 'package:club_sebastian_martinez_amaray/services/session_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,49 +10,62 @@ import 'package:http/http.dart' as http;
 
 import '../helpers/test_helpers.dart';
 
+/// La credencial la resuelve el proveedor (Firebase) detrás de [AuthBackend]; el
+/// backend propio sólo recibe el ID token. Por eso estos tests inyectan
+/// `FakeAuthBackend` y sólo simulan las respuestas de la API.
 void main() {
-  AuthService buildAuth(FakeBackend backend, {SessionStorage? storage}) {
+  AuthService buildAuth(
+    FakeBackend backend, {
+    SessionStorage? storage,
+    AuthBackend? authBackend,
+  }) {
     return AuthService(
       api: ApiClient(baseUrl: 'http://test.local', client: backend.client),
       storage: storage ?? InMemorySessionStorage(),
+      backend: authBackend ?? FakeAuthBackend(),
     );
   }
 
   group('login', () {
-    test('sends the credentials and keeps the token of the session', () async {
+    test('autentica con el proveedor y trae el perfil de GET /users/me',
+        () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async => jsonResponse(tokenResponseJson()),
+        (http.Request request) async => jsonResponse(userJson()),
       );
+      final FakeAuthBackend authBackend = FakeAuthBackend();
       final InMemorySessionStorage storage = InMemorySessionStorage();
-      final AuthService auth = buildAuth(backend, storage: storage);
+      final AuthService auth =
+          buildAuth(backend, storage: storage, authBackend: authBackend);
 
       final user = await auth.login(
         email: 'maria@club.com',
         password: 'Secreta123',
       );
 
-      expect(backend.lastRequest.url.path, '/auth/login');
-      expect(backend.bodyOf(backend.lastRequest)['email'], 'maria@club.com');
-      expect(backend.bodyOf(backend.lastRequest)['password'], 'Secreta123');
+      // El proveedor recibió las credenciales; la API sólo el token.
+      expect(authBackend.calls, contains('signInWithPassword'));
+      expect(authBackend.lastEmail, 'maria@club.com');
+      expect(backend.paths, equals(<String>['/users/me']));
       expect(user.email, 'maria@club.com');
-      expect(auth.token, 'eyJhbG.token.de.prueba');
+      expect(auth.token, 'id-token-de-prueba');
       expect(auth.isAuthenticated, isTrue);
 
       final SessionData? saved = await storage.read();
       expect(saved, isNotNull);
-      expect(saved!.token, 'eyJhbG.token.de.prueba');
+      expect(saved!.token, 'id-token-de-prueba');
       expect(saved.user['email'], 'maria@club.com');
     });
 
-    test('propagates invalid_credentials', () async {
+    test('traduce las credenciales inválidas del proveedor', () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async => errorResponse(
-          401,
-          'Correo o contraseña incorrectos.',
-          'invalid_credentials',
+        (http.Request request) async => jsonResponse(userJson()),
+      );
+      final AuthService auth = buildAuth(
+        backend,
+        authBackend: FakeAuthBackend(
+          loginError: const AuthBackendException('wrong-password'),
         ),
       );
-      final AuthService auth = buildAuth(backend);
 
       await expectLater(
         auth.login(email: 'maria@club.com', password: 'mala'),
@@ -64,9 +78,11 @@ void main() {
         ),
       );
       expect(auth.isAuthenticated, isFalse);
+      // Ni siquiera llegó a pedir el perfil.
+      expect(backend.requests, isEmpty);
     });
 
-    test('propagates connectivity problems', () async {
+    test('propaga los problemas de conexión', () async {
       final FakeBackend backend = FakeBackend((http.Request request) {
         throw const SocketException('Connection refused');
       });
@@ -86,12 +102,13 @@ void main() {
   });
 
   group('register', () {
-    test('sends the fields of UserRegister and logs the user in', () async {
+    test('crea la cuenta y manda el perfil a POST /auth/firebase-sync',
+        () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async =>
-            jsonResponse(tokenResponseJson(), statusCode: 201),
+        (http.Request request) async => jsonResponse(userJson()),
       );
-      final AuthService auth = buildAuth(backend);
+      final FakeAuthBackend authBackend = FakeAuthBackend();
+      final AuthService auth = buildAuth(backend, authBackend: authBackend);
 
       await auth.register(
         email: 'maria@club.com',
@@ -101,31 +118,26 @@ void main() {
         birthDate: DateTime(1996, 3, 8),
       );
 
-      final Map<String, dynamic> body = backend.bodyOf(backend.lastRequest);
-      expect(backend.lastRequest.url.path, '/auth/register');
-      expect(
-        body.keys.toSet(),
-        equals(<String>{
-          'email',
-          'password',
-          'first_name',
-          'last_name',
-          'birth_date',
-        }),
-      );
+      expect(authBackend.calls, contains('createUser'));
+
+      final http.Request sync = backend.requestsFor('/auth/firebase-sync').single;
+      final Map<String, dynamic> body = backend.bodyOf(sync);
+      expect(body['first_name'], 'María');
+      expect(body['last_name'], 'Lopez');
       expect(body['birth_date'], '1996-03-08');
       expect(auth.token, isNotNull);
     });
 
-    test('propagates email_already_registered', () async {
+    test('traduce el correo ya registrado', () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async => errorResponse(
-          409,
-          'Ya existe un usuario registrado con ese correo.',
-          'email_already_registered',
+        (http.Request request) async => jsonResponse(userJson()),
+      );
+      final AuthService auth = buildAuth(
+        backend,
+        authBackend: FakeAuthBackend(
+          registerError: const AuthBackendException('email-already-in-use'),
         ),
       );
-      final AuthService auth = buildAuth(backend);
 
       await expectLater(
         auth.register(
@@ -146,34 +158,36 @@ void main() {
   });
 
   group('password recovery', () {
-    test('returns the reset token when the API is in DEBUG mode', () async {
+    test('pide el correo de recuperación al proveedor y no devuelve token',
+        () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async => jsonResponse(<String, dynamic>{
-          'message':
-              'Si el correo está registrado, te enviamos las instrucciones.',
-          'reset_token': '6fNa8JxywwKY-F-FHGRO5Bx6emx0Wd21dfNDMapUnXI',
-        }),
+        (http.Request request) async => jsonResponse(<String, dynamic>{}),
       );
-      final AuthService auth = buildAuth(backend);
+      final FakeAuthBackend authBackend = FakeAuthBackend();
+      final AuthService auth = buildAuth(backend, authBackend: authBackend);
 
       final String? token = await auth.requestPasswordReset('maria@club.com');
 
-      expect(backend.lastRequest.url.path, '/auth/forgot-password');
-      expect(backend.bodyOf(backend.lastRequest)['email'], 'maria@club.com');
-      expect(token, '6fNa8JxywwKY-F-FHGRO5Bx6emx0Wd21dfNDMapUnXI');
+      expect(authBackend.calls, contains('sendPasswordResetEmail'));
+      expect(authBackend.lastEmail, 'maria@club.com');
+      expect(token, isNull);
+      // El envío lo hace Firebase: no hay request propio.
+      expect(backend.requests, isEmpty);
     });
 
-    test('returns null when the API does not expose the token', () async {
+    test('no revela si el correo existe', () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async => jsonResponse(<String, dynamic>{
-          'message': 'Si el correo está registrado, te enviamos las '
-              'instrucciones para restablecer la contraseña.',
-          'reset_token': null,
-        }),
+        (http.Request request) async => jsonResponse(<String, dynamic>{}),
       );
-      final AuthService auth = buildAuth(backend);
+      final AuthService auth = buildAuth(
+        backend,
+        authBackend: FakeAuthBackend(
+          resetError: const AuthBackendException('user-not-found'),
+        ),
+      );
 
-      expect(await auth.requestPasswordReset('maria@club.com'), isNull);
+      // El proveedor diría "user-not-found", pero el servicio lo silencia.
+      expect(await auth.requestPasswordReset('nadie@club.com'), isNull);
     });
 
     test('resets the password and returns the message of the API', () async {
@@ -218,7 +232,8 @@ void main() {
   });
 
   group('session', () {
-    test('restore reads the stored session and applies the token', () async {
+    test('restore toma el ID token del proveedor y el perfil guardado',
+        () async {
       final InMemorySessionStorage storage = InMemorySessionStorage();
       await storage.save(
         SessionData(token: 'token-guardado', user: userJson()),
@@ -228,7 +243,11 @@ void main() {
       );
       final ApiClient api =
           ApiClient(baseUrl: 'http://test.local', client: backend.client);
-      final AuthService auth = AuthService(api: api, storage: storage);
+      final AuthService auth = AuthService(
+        api: api,
+        storage: storage,
+        backend: FakeAuthBackend(idToken: 'token-guardado', rememberUser: true),
+      );
 
       expect(await auth.restore(), isTrue);
       expect(auth.token, 'token-guardado');
@@ -236,7 +255,7 @@ void main() {
       expect(auth.user?.email, 'maria@club.com');
     });
 
-    test('restore returns false without a stored session', () async {
+    test('restore devuelve false sin usuario en el proveedor', () async {
       final FakeBackend backend = FakeBackend(
         (http.Request request) async => jsonResponse(<String, dynamic>{}),
       );
@@ -244,23 +263,28 @@ void main() {
 
       expect(await auth.restore(), isFalse);
       expect(auth.isAuthenticated, isFalse);
+      expect(backend.requests, isEmpty);
     });
 
-    test('logout forgets the token and the stored session', () async {
-      final InMemorySessionStorage storage = InMemorySessionStorage();
+    test('logout cierra la sesión del proveedor y olvida el perfil', () async {
       final FakeBackend backend = FakeBackend(
-        (http.Request request) async => jsonResponse(tokenResponseJson()),
+        (http.Request request) async => jsonResponse(userJson()),
       );
+      final FakeAuthBackend authBackend = FakeAuthBackend();
       final ApiClient api =
           ApiClient(baseUrl: 'http://test.local', client: backend.client);
-      final AuthService auth = AuthService(api: api, storage: storage);
+      final AuthService auth = AuthService(
+        api: api,
+        storage: InMemorySessionStorage(),
+        backend: authBackend,
+      );
 
       await auth.login(email: 'maria@club.com', password: 'Secreta123');
       await auth.logout();
 
       expect(auth.isAuthenticated, isFalse);
       expect(api.authToken, isNull);
-      expect(await storage.read(), isNull);
+      expect(authBackend.signedOut, isTrue);
     });
   });
 

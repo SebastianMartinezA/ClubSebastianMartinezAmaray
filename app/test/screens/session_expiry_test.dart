@@ -18,8 +18,8 @@ void main() {
   bool tokenExpired = false;
 
   Future<http.Response> backend(http.Request request) async {
-    if (request.url.path == '/auth/login') {
-      return jsonResponse(tokenResponseJson());
+    if (request.url.path == '/users/me') {
+      return jsonResponse(userJson());
     }
     if (tokenExpired) {
       return errorResponse(
