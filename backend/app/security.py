@@ -173,9 +173,10 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
 # Tokens de recuperación de contraseña
 # --------------------------------------------------------------------------- #
 def generate_reset_token() -> str:
-    return secrets.token_urlsafe(32)
+    """Código de recuperación de 6 dígitos: se dicta o se copia del correo sin errores."""
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def hash_reset_token(token: str) -> str:
-    # SHA-256 alcanza: el token ya es aleatorio de 256 bits, no hace falta un KDF lento.
+    # SHA-256 alcanza para no guardar el código en claro: es corto y de un solo uso.
     return hashlib.sha256(token.encode("utf-8")).hexdigest()

@@ -40,6 +40,7 @@ from ..security import (
     verify_firebase_id_token,
     verify_password,
 )
+from ..services import firebase_admin
 from ..services.notifications import send_password_reset_email
 
 logger = logging.getLogger(__name__)
@@ -194,7 +195,7 @@ def firebase_sync(
     "/forgot-password",
     response_model=ForgotPasswordResponse,
     responses=documented_errors(400),
-    summary="Pedir el token de recuperación de contraseña",
+    summary="Pedir el código de recuperación de contraseña",
 )
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> ForgotPasswordResponse:
     email = _normalize_email(payload.email)
@@ -247,7 +248,7 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     ).scalar_one_or_none()
 
     if record is None:
-        raise ValidationError("El token de recuperación es inválido.", code="invalid_reset_token")
+        raise ValidationError("El código de recuperación es inválido.", code="invalid_reset_token")
 
     now = datetime.now(timezone.utc)
     expires_at = record.expires_at
@@ -255,17 +256,21 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     if record.used_at is not None:
-        raise ValidationError("El token ya fue usado.", code="reset_token_used")
+        raise ValidationError("El código ya fue usado.", code="reset_token_used")
     if expires_at < now:
-        raise ValidationError("El token de recuperación expiró.", code="reset_token_expired")
+        raise ValidationError("El código de recuperación expiró.", code="reset_token_expired")
 
     user = db.get(User, record.user_id)
     if user is None:
-        raise NotFoundError("El usuario del token ya no existe.", code="user_not_found")
+        raise NotFoundError("El usuario del código ya no existe.", code="user_not_found")
 
     user.password_hash = hash_password(payload.new_password)
     record.used_at = now
     db.commit()
+
+    # La app autentica contra Firebase: si la cuenta vive ahí, hay que cambiar la contraseña
+    # también allá o el código por correo no serviría para nada.
+    firebase_admin.set_password(user.email, payload.new_password)
 
     return MessageOut(
         detail="Contraseña actualizada. Ya podés iniciar sesión con la nueva.",

@@ -103,6 +103,7 @@ def test_flujo_completo_de_recuperacion(client, monkeypatch, demo_credentials):
     assert pedido.status_code == 200
     token = pedido.json()["reset_token"]
     assert token, "con DEBUG=true y sin SMTP el token tiene que venir en la respuesta"
+    assert len(token) == 6 and token.isdigit(), "el código que llega por correo son 6 números"
 
     cambio = client.post("/auth/reset-password", json={"token": token, "new_password": "NuevaClave123"})
     assert cambio.status_code == 200, cambio.text

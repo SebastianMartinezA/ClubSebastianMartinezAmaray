@@ -162,8 +162,9 @@ _RESET_SUBJECT = "Recuperación de contraseña - ClubSebastianMartinezAmaray"
 def _reset_body(token: str, expires_minutes: int) -> str:
     return (
         "Pediste restablecer tu contraseña.\n\n"
-        f"Usá este token en POST /auth/reset-password (vence en {expires_minutes} minutos):\n\n"
-        f"{token}\n\n"
+        f"Tu código es: {token}\n\n"
+        f"Vence en {expires_minutes} minutos. Ingresalo en la app, en la pantalla de "
+        "recuperación de contraseña.\n\n"
         "Si no fuiste vos, ignorá este mensaje."
     )
 

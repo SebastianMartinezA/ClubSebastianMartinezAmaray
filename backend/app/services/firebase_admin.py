@@ -110,3 +110,37 @@ def import_users(users: list[dict]) -> dict:
     created = len(users) - len(errors)
     logger.info("Importación a Firebase: %s de %s usuarios", created, len(users))
     return {"attempted": len(users), "created": created, "errors": errors}
+
+
+def set_password(email: str, password: str) -> bool:
+    """Cambia la contraseña de una cuenta en Firebase Auth.
+
+    Se usa al restablecer la contraseña: la app autentica contra Firebase, así que dejar
+    sólo el hash local no alcanza para que la contraseña nueva sirva.
+    Devuelve True si Firebase aceptó el cambio.
+    """
+    if not configured():
+        return False
+    service_account = _service_account()
+    project_id = service_account["project_id"]
+    try:
+        access_token = _access_token(service_account)
+        response = requests.post(
+            f"https://identitytoolkit.googleapis.com/v1/projects/{project_id}/accounts:update",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"email": email, "password": password},
+            timeout=30,
+        )
+    except Exception:  # red, JWT o credenciales: el reset local ya está hecho, no se rompe el request
+        logger.exception("No se pudo actualizar la contraseña en Firebase para %s", email)
+        return False
+    if response.status_code >= 400:
+        logger.warning(
+            "Firebase rechazó el cambio de contraseña de %s (%s): %s",
+            email,
+            response.status_code,
+            response.text[:300],
+        )
+        return False
+    logger.info("Contraseña actualizada también en Firebase para %s", email)
+    return True

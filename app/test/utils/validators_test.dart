@@ -50,16 +50,16 @@ void main() {
   });
 
   group('Validators.resetToken', () {
-    test('accepts the token of the API', () {
-      expect(
-        Validators.resetToken('6fNa8JxywwKY-F-FHGRO5Bx6emx0Wd21dfNDMapUnXI'),
-        isNull,
-      );
+    test('accepts a six digit code from the API', () {
+      expect(Validators.resetToken('123456'), isNull);
+      expect(Validators.resetToken(' 000001 '), isNull);
     });
 
-    test('rejects an empty or too short token', () {
+    test('rejects anything that is not six digits', () {
       expect(Validators.resetToken(''), isNotNull);
-      expect(Validators.resetToken('abc'), isNotNull);
+      expect(Validators.resetToken('12345'), isNotNull);
+      expect(Validators.resetToken('1234567'), isNotNull);
+      expect(Validators.resetToken('abc123'), isNotNull);
     });
   });
 

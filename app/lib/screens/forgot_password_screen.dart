@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/api_error.dart';
@@ -165,9 +166,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         TextFormField(
                           controller: _token,
                           autocorrect: false,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ],
                           decoration: AppTheme.inputDecoration(
                             'Código de recuperación',
-                            hint: 'Pegá el código que recibiste',
+                            hint: 'Los 6 números del correo',
                             prefixIcon: const Icon(Icons.vpn_key_outlined),
                           ),
                           validator: Validators.resetToken,
